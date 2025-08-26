@@ -1,29 +1,26 @@
 <!DOCTYPE html>
 <html>
+<!-- index.html -->
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Odyssey Engine</title>
-    <script src="//cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+
+    <!-- Phaserの読み込み -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    
+    <!-- ★★★ ここから追加 ★★★ -->
+    <!-- Babylon.js 本体 -->
+    <script src="https://cdn.jsdelivr.net/npm/@babylonjs/core/babylon.min.js"></script>
+    <!-- Babylon.js GLTF/GLBモデルローダー -->
+    <script src="https://cdn.jsdelivr.net/npm/@babylonjs/loaders/babylonjs.loaders.min.js"></script>
+    <!-- 物理エンジン (今回はまだ使いませんが、今後のために) -->
+    <script src="https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
+    <!-- ★★★ ここまで追加 ★★★ -->
+    
     <style>
-        body { margin: 0; padding: 0; background-color: #000; }
-        
-        /* ★★★ ここからオーバーレイ用のCSSを追加 ★★★ */
-     /*   #orientation-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            color: white;
-            font-size: 24px;
-            text-align: center;
-            /* Flexboxを使って、テキストを画面のど真ん中に配置する 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;  ゲーム画面より必ず手前に表示 */
-        
+        /* canvasが重なるため、Phaserの背景を透明にする */
+        canvas { background-color: transparent !important; }
     </style>
 </head>
 <body>
@@ -38,3 +35,4 @@
     <script type="module" src="src/main.js"></script>
 </body>
 </html>
+
