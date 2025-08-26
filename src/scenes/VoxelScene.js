@@ -1,19 +1,16 @@
-// src/scenes/VoxelScene.js (修正版)
-
 // ★★★ ここからが修正箇所 ★★★
-// windowオブジェクトからBABYLONを安全に取得する
-// これにより、ES6モジュール環境でもグローバル変数を正しく参照できる
-const BABYLON = window.BABYLON;
-
-// Babylon.jsのクラスを変数に入れておくと、コード補完が効きやすくなります
-const Scene = BABYLON.Scene;
-const Engine = BABYLON.Engine;
-const ArcRotateCamera = BABYLON.ArcRotateCamera;
-const Vector3 = BABYLON.Vector3;
-const HemisphericLight = BABYLON.HemisphericLight;
-const MeshBuilder = BABYLON.MeshBuilder; // CreateBoxはMeshBuilderに含まれる
+// Babylon.jsのコアライブラリとローダーをCDNから直接ES6モジュールとしてimport
+import {
+    Scene,
+    Engine,
+    ArcRotateCamera,
+    Vector3,
+    HemisphericLight,
+    MeshBuilder,
+    Color4
+} from "https://cdn.jsdelivr.net/npm/@babylonjs/core@6.40.1/index.min.js";
+// (注: Babylon.jsのバージョンは任意ですが、新しいものに合わせています)
 // ★★★ ここまでが修正箇所 ★★★
-
 export default class VoxelScene extends Phaser.Scene {
     constructor() {
         super({ key: 'VoxelScene' });
