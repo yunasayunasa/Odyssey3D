@@ -1,4 +1,9 @@
-// src/scenes/VoxelScene.js
+// src/scenes/VoxelScene.js (修正版)
+
+// ★★★ ここからが修正箇所 ★★★
+// windowオブジェクトからBABYLONを安全に取得する
+// これにより、ES6モジュール環境でもグローバル変数を正しく参照できる
+const BABYLON = window.BABYLON;
 
 // Babylon.jsのクラスを変数に入れておくと、コード補完が効きやすくなります
 const Scene = BABYLON.Scene;
@@ -6,7 +11,8 @@ const Engine = BABYLON.Engine;
 const ArcRotateCamera = BABYLON.ArcRotateCamera;
 const Vector3 = BABYLON.Vector3;
 const HemisphericLight = BABYLON.HemisphericLight;
-const CreateBox = BABYLON.MeshBuilder.CreateBox; // テスト用の箱を作るため
+const MeshBuilder = BABYLON.MeshBuilder; // CreateBoxはMeshBuilderに含まれる
+// ★★★ ここまでが修正箇所 ★★★
 
 export default class VoxelScene extends Phaser.Scene {
     constructor() {
@@ -23,20 +29,19 @@ export default class VoxelScene extends Phaser.Scene {
         const gameHeight = this.scale.height;
 
         // 1. Babylon.jsを描画するためのcanvas要素を、PhaserのDOM要素として追加
-        //    CSSで、Phaserのcanvasの真下に配置されるように調整
         const bjsCanvas = this.add.dom(0, 0, 'canvas', {
             width: `${gameWidth}px`,
             height: `${gameHeight}px`,
             position: 'absolute',
             top: '0',
             left: '0',
-            'z-index': '-1' // Phaserのcanvasより後ろに表示
+            'z-index': '-1'
         }).setOrigin(0, 0);
 
         // 2. Babylon.jsのEngineとSceneを初期化
         this.bjs_engine = new Engine(bjsCanvas.node, true);
         this.bjs_scene = new Scene(this.bjs_engine);
-        this.bjs_scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.2, 1); // 背景色（紺色）
+        this.bjs_scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.2, 1);
 
         // 3. カメラを作成し、操作できるようにする
         const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 15, Vector3.Zero(), this.bjs_scene);
@@ -46,11 +51,13 @@ export default class VoxelScene extends Phaser.Scene {
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.bjs_scene);
 
         // 5. テスト用に、中央に箱を1つ配置
-        const box = CreateBox("box", { size: 2 }, this.bjs_scene);
+        const box = MeshBuilder.CreateBox("box", { size: 2 }, this.bjs_scene);
 
         // 6. Babylon.jsのレンダリングループを開始
         this.bjs_engine.runRenderLoop(() => {
-            this.bjs_scene.render();
+            if (this.bjs_scene) { // shutdown後に呼ばれないようにチェック
+                this.bjs_scene.render();
+            }
         });
 
         // 7. Phaserの画面リサイズ時に、Babylon.jsの描画サイズも追従させる
@@ -69,22 +76,25 @@ export default class VoxelScene extends Phaser.Scene {
         });
     }
 
-    // 画面リサイズ用のヘルパーメソッド
     resize(gameSize) {
         if (this.bjs_engine) {
             this.bjs_engine.resize();
         }
     }
 
-    // 5ヶ条-4: shutdownで後片付け
     shutdown() {
         console.log("VoxelScene: shutdown - リソースを破棄します。");
         this.scale.off('resize', this.resize, this);
         this.input.keyboard.off('keydown-ESC');
 
         if (this.bjs_engine) {
+            // レンダリングループを停止
+            this.bjs_engine.stopRenderLoop();
+            // エンジンを破棄
             this.bjs_engine.dispose();
+            this.bjs_engine = null;
         }
+        this.bjs_scene = null;
         
         super.shutdown();
     }
