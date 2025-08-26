@@ -1,0 +1,28 @@
+{
+  "images": {
+    "message_window": "assets/message_window.png",
+     "yuna_normal": "assets/yuna_smile.png",
+      "kaito_normal": "assets/kaito_normal.png" ,
+     "bg_school": "assets/bg_school.jpg" ,
+    "cg01": "assets/event_cg_01.jpg" ,
+     "yuna_angry": "assets/title_button.png",
+     "next_arrow": "assets/next_arrow.png",
+    "roger_normal": "assets/roger_normal.png",
+    "umi": "assets/umi.jpg" ,
+ "item_sword": "assets/item/sword.png" ,
+"item_shield": "assets/item/shield.png" ,
+"item_potion": "assets/item/potion.png" ,
+     "enzan": "assets/enzan.jpg" ,
+     "enzan2": "assets/enzan2.png"
+  },
+  "sounds": {
+"popopo": "assets/gyakuten_popopo.mp3",
+"cafe": "assets/cafe.mp3",
+ "bgm_battle": "assets/gyakuten_bgm.mp3",
+"ronpa_bgm": "assets/ronpa_bgm.mp3"
+
+  },
+  "videos": {
+    "opening": "assets/opening.mp4"
+  }
+  }
