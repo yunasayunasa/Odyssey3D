@@ -11,7 +11,7 @@ import ActionScene from './scenes/ActionScene.js';
 import BattleScene from './scenes/BattleScene.js';
 import NovelOverlayScene from './scenes/NovelOverlayScene.js';
 
-//import VoxelScene from './scenes/VoxelScene.js';
+import VoxelScene from './scenes/VoxelScene.js';
 const config = {
     type: Phaser.AUTO,
     scale: {
@@ -32,8 +32,8 @@ const config = {
         BacklogScene, 
         ActionScene,
          BattleScene,
-        NovelOverlayScene
-      //  VoxelScene
+        NovelOverlayScene,
+        VoxelScene
     ]
 };
 
