@@ -14,24 +14,16 @@
  
     
     <style>
-        /* canvasが重なるため、Phaserの背景を透明にする */
-        canvas { background-color: transparent !important; }
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     </style>
 </head>
 <body>
-       <!-- ★★★ Babylon.js専用のcanvasを追加 ★★★ -->
-    <!-- 普段は非表示にしておき、VoxelSceneで表示する -->
-    <canvas id="babylon-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; display: none;"></style>
-
-    <!-- Phaserのゲーム画面コンテナ (これはz-indexが高い) -->
-    <div id="phaser-game" style="position: absolute; top: 0; left: 0; z-index: 1;"></div>
-    <!-- ゲーム画面のコンテナ -->
-   
-
-    <!-- ★★★ 回転促進オーバーレイ（普段は隠しておく）★★★ -->
-    <div id="orientation-overlay" style="display: none;">
-        <p>画面を横向きにして<br>お楽しみください</p>
-    </div>
+     <!-- Phaser専用のcanvasがここに入る -->
+    <div id="phaser-container"></div>
+    
+    <!-- Babylon.js専用のcanvas (最初は非表示) -->
+    <canvas id="babylon-canvas" style="display: none;"></canvas>
 
     <script type="module" src="src/main.js"></script>
 </body>

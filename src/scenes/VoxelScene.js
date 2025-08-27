@@ -38,7 +38,13 @@ export default class VoxelScene extends Phaser.Scene {
 
         // 1. Babylon.jsを描画するためのcanvas要素を、PhaserのDOM要素として追加
        // 1. HTMLからBabylon.js用のcanvasを取得
+       // ★★★ レイヤー管理 ★★★
+        const phaserContainer = document.getElementById('phaser-container');
         const bjsCanvasNode = document.getElementById('babylon-canvas');
+
+        // Phaserの舞台を隠し、Babylonの舞台を見せる
+        phaserContainer.style.display = 'none';
+        bjsCanvasNode.style.display = 'block';
         if (!bjsCanvasNode) {
             console.error("babylon-canvasが見つかりません！");
             return;
@@ -109,7 +115,13 @@ export default class VoxelScene extends Phaser.Scene {
 
     shutdown() {
         console.log("VoxelScene: shutdown - リソースを破棄します。");
-           const bjsCanvasNode = document.getElementById('babylon-canvas');
+           // ★★★ レイヤー管理 ★★★
+        const phaserContainer = document.getElementById('phaser-container');
+        const bjsCanvasNode = document.getElementById('babylon-canvas');
+        
+        // Babylonの舞台を隠し、Phaserの舞台を元に戻す
+        if (bjsCanvasNode) bjsCanvasNode.style.display = 'none';
+        if (phaserContainer) phaserContainer.style.display = 'block';
         if (bjsCanvasNode) {
             bjsCanvasNode.style.display = 'none';
         }

@@ -16,11 +16,12 @@ const config = {
     type: Phaser.AUTO,
     scale: {
         mode: Phaser.Scale.FIT,
-        parent: 'phaser-game',
+        parent: 'phaser-container', // ★ ここを修正
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 1280,
         height: 720
     },
+     transparent: true, // Phaserの背景を透明にする
     // ★★★ 修正箇所: シーン設定を直接クラスを渡す形式に維持 ★★★
     scene: [
         PreloadScene, 
