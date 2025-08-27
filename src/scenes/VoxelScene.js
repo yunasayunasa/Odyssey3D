@@ -61,65 +61,55 @@ export default class VoxelScene extends Phaser.Scene {
         this.bjs_scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), cannonPlugin);
         // 3. ステージのオブジェクト定義をループで処理し、すべてのモデルをロード
         console.log(`VoxelScene: ステージ「${stageData.name}」のモデルをロードします...`);
-        for (const obj of stageData.objects) {
-            const modelKey = obj.key;
-            const modelPath = assetDefine.models[modelKey];
-            if (!modelPath) {
-                console.warn(`モデルキー[${modelKey}]が見つかりません。スキップします。`);
-                continue;
+      // ★★★ ループ開始 ★★★
+    for (const obj of stageData.objects) {
+        const modelKey = obj.key;
+        const modelPath = assetDefine.models[modelKey];
+        if (!modelPath) {
+            console.warn(`モデルキー[${modelKey}]が見つかりません。`);
+            continue;
+        }
+        
+        try {
+            const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
+            const model = result.meshes[0];
+            model.name = obj.name;
+            model.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
+            if (obj.scale) {
+                model.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
             }
             
-            try {
-                // モデルを非同期でロード
-                const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
-                
-                const model = result.meshes[0];
-                model.name = obj.name; // JSONで定義した名前を付ける
-
-                // JSONで定義された位置とスケールを適用
-                model.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
-                if (obj.scale) {
-                    model.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
-                }
-                
-                // アニメーションがあれば再生
-                if (result.animationGroups && result.animationGroups.length > 0) {
-                    result.animationGroups[0].play(true);
-                }
-                console.log(`モデル「${model.name}」を配置しました。`);
-
-            } catch (error) {
-                console.error(`モデル[${modelKey}]のロード中にエラーが発生しました。`, error);
-            }
-        }
-           if (obj.key === 'ground_basic') {
-                // 床や壁のような「動かない」オブジェクト
+            // ★★★ 物理ボディを設定するロジックを、ループの内側に移動 ★★★
+            if (obj.key === 'ground_basic') {
                 model.physicsImpostor = new BABYLON.PhysicsImpostor(
-                    model, 
-                    BABYLON.PhysicsImpostor.BoxImpostor, // 形状は箱
-                    { mass: 0, friction: 0.5, restitution: 0.1 }, // mass: 0 で静的なオブジェクト
-                    this.bjs_scene
+                    model, BABYLON.PhysicsImpostor.BoxImpostor,
+                    { mass: 0, friction: 0.5, restitution: 0.1 }, this.bjs_scene
                 );
             } else if (obj.key === 'player_borntest') {
-                // プレイヤーキャラクター
                 model.physicsImpostor = new BABYLON.PhysicsImpostor(
-                    model, 
-                    BABYLON.PhysicsImpostor.CapsuleImpostor, // キャラクターにはカプセル型がおすすめ
-                    { mass: 1, friction: 0.5, restitution: 0.0 }, // mass: 1 で動的なオブジェクト
-                    this.bjs_scene
+                    model, BABYLON.PhysicsImpostor.CapsuleImpostor,
+                    { mass: 1, friction: 0.5, restitution: 0.0 }, this.bjs_scene
                 );
-                // 物理ボディが回転しないようにする (横スクロールゲームのお約束)
                 model.physicsImpostor.physicsBody.angularDamping = 1.0;
-                
-                // 後で操作できるように、このオブジェクトを保持しておく
                 this.player = model; 
             }
-            // ★★★ ここまでが修正箇所 ★★★
-        }
+            // ★★★ ここまでが移動したコード ★★★
 
-        // --- ★★★ 入力設定の追加 ★★★ ---
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.input.keyboard.on('keydown-SPACE', this.playerJump, this);
+            if (result.animationGroups.length > 0) {
+                result.animationGroups[0].play(true);
+            }
+            console.log(`モデル「${model.name}」を配置し、物理ボディを設定しました。`);
+
+        } catch (error) {
+            console.error(`モデル[${modelKey}]のロード中にエラーが発生しました。`, error);
+        }
+    }
+    // ★★★ ループ終了 ★★★
+
+    // --- 入力設定 ---
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.input.keyboard.on('keydown-SPACE', this.playerJump, this);
+
         // --- ★★★ ここまでが修正箇所 ★★★ ---
 
         this.bjs_engine.runRenderLoop(() => {
