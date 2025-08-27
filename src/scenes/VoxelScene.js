@@ -1,5 +1,6 @@
 // src/scenes/VoxelScene.js (DOM参照修正版)
-
+const BABYLON = window.BABYLON;
+const SceneLoader = BABYLON.SceneLoader; 
 // import文は不要です
 
 export default class VoxelScene extends Phaser.Scene {
@@ -17,6 +18,7 @@ export default class VoxelScene extends Phaser.Scene {
         await this.waitForBabylon();
 
         const BABYLON = window.BABYLON;
+const SceneLoader = BABYLON.SceneLoader; 
         const Scene = BABYLON.Scene;
         const Engine = BABYLON.Engine;
         const ArcRotateCamera = BABYLON.ArcRotateCamera;
@@ -51,7 +53,38 @@ export default class VoxelScene extends Phaser.Scene {
         // ★★★ ここまでが修正箇所 ★★★
 
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.bjs_scene);
-        const box = MeshBuilder.CreateBox("box", { size: 2 }, this.bjs_scene);
+         // 5. あなたのモデルをGitHubからロード
+        const rootUrl = "https://raw.githubusercontent.com/yunasayunasa/Odyssey3D/main/assets/models/";
+        const fileName = "Borntest.glb";
+
+        console.log(`VoxelScene: モデルのロードを開始します... URL: ${rootUrl}${fileName}`);
+
+        try {
+            const result = await SceneLoader.ImportMeshAsync("", rootUrl, fileName, this.bjs_scene);
+
+            console.log("VoxelScene: モデルのロードに成功しました！", result);
+
+            // ロードしたモデルの最初のメッシュを取得 (通常は__root__という名前)
+            const model = result.meshes[0];
+            
+            // モデルのサイズや位置を調整
+            model.scaling.scaleInPlace(1.0); // まずは等倍で表示
+            model.position = new BABYLON.Vector3(0, 0, 0); // 原点に配置
+
+            // もしアニメーションがあれば、最初のアニメーションをループ再生
+            if (result.animationGroups && result.animationGroups.length > 0) {
+                const animationGroup = result.animationGroups[0];
+                animationGroup.play(true); // trueでループ再生
+                console.log(`VoxelScene: アニメーション「${animationGroup.name}」を再生します。`);
+            }
+
+        } catch (error) {
+            console.error("VoxelScene: モデルのロード中にエラーが発生しました。", error);
+            // エラーが起きてもシーンが止まらないように、ここにエラーメッセージを表示するテキストなどを置くと親切
+            this.add.text(100, 100, "Model Load Error!", { color: "red", fontSize: "32px" });
+        }
+        
+        // ★★★ ここまでが変更箇所 ★★★
 
         this.bjs_engine.runRenderLoop(() => {
             if (this.bjs_scene) {
