@@ -22,7 +22,19 @@
 "ronpa_bgm": "assets/ronpa_bgm.mp3"
 
   },
-  "videos": {
-    "opening": "assets/opening.mp4"
+    "models": {
+        "player_borntest": {
+            "rootUrl": "assets/models/",
+            "fileName": "Borntest.glb"
+        },
+        "stage_01": {
+            "rootUrl": "assets/models/",
+            "fileName": "Stage.glb"
+        },
+        "item_sword": {
+            "rootUrl": "https://some-cdn.com/models/",
+            "fileName": "sword.glb"
+        }
+    
   }
   }

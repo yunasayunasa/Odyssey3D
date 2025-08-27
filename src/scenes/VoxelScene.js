@@ -1,95 +1,96 @@
-// src/scenes/VoxelScene.js (DOM参照修正版)
+// src/scenes/VoxelScene.js (JSONキャッシュ利用・最終版)
+
+// Babylon.jsのクラスをグローバルから取得
 const BABYLON = window.BABYLON;
-const SceneLoader = BABYLON.SceneLoader; 
-// import文は不要です
 
 export default class VoxelScene extends Phaser.Scene {
     constructor() {
         super({ key: 'VoxelScene' });
-
         this.bjs_engine = null;
         this.bjs_scene = null;
-        // this.bjs_canvas プロパティはもう使いません
+        this.modelKey = 'player_borntest'; // デフォルトで表示するモデルのキー
+    }
+    
+    // シナリオからデータを受け取る
+    init(data) {
+        // [jump]タグのparamsで指定されたmodelKeyを受け取る
+        if (data && data.modelKey) {
+            this.modelKey = data.modelKey;
+        }
     }
 
     async create() {
         console.log("VoxelScene: create - 3Dシーンの構築を開始します。");
-
         await this.waitForBabylon();
 
-        const BABYLON = window.BABYLON;
-const SceneLoader = BABYLON.SceneLoader; 
+        // Babylon.jsのクラスを変数に入れる
         const Scene = BABYLON.Scene;
         const Engine = BABYLON.Engine;
+        const SceneLoader = BABYLON.SceneLoader;
         const ArcRotateCamera = BABYLON.ArcRotateCamera;
         const Vector3 = BABYLON.Vector3;
         const HemisphericLight = BABYLON.HemisphericLight;
-        const MeshBuilder = BABYLON.MeshBuilder;
         const Color4 = BABYLON.Color4;
 
         // --- レイヤー管理 ---
         const phaserContainer = document.getElementById('phaser-container');
         const bjsCanvasNode = document.getElementById('babylon-canvas');
-
         if (!bjsCanvasNode || !phaserContainer) {
             console.error("HTML要素が見つかりません。index.htmlを確認してください。");
             return;
         }
-
         phaserContainer.style.display = 'none';
         bjsCanvasNode.style.display = 'block';
         
         // --- Babylon.jsの初期化 ---
-
-        // ★★★ ここからが修正箇所 ★★★
-        // 1. this.add.domを使わず、直接取得したHTML要素をEngineに渡す
         this.bjs_engine = new Engine(bjsCanvasNode, true);
         this.bjs_scene = new Scene(this.bjs_engine);
         this.bjs_scene.clearColor = new Color4(0.1, 0.1, 0.2, 1);
 
-        // 2. カメラのattachControlも、直接取得したHTML要素を渡す
         const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 15, Vector3.Zero(), this.bjs_scene);
         camera.attachControl(bjsCanvasNode, true);
-        // ★★★ ここまでが修正箇所 ★★★
-
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.bjs_scene);
-         // 5. あなたのモデルをGitHubからロード
-        const rootUrl = "https://raw.githubusercontent.com/yunasayunasa/Odyssey3D/main/assets/models/";
-        const fileName = "Borntest.glb";
 
-        console.log(`VoxelScene: モデルのロードを開始します... URL: ${rootUrl}${fileName}`);
+        // ★★★ ここからが修正箇所 ★★★
 
-        try {
-            const result = await SceneLoader.ImportMeshAsync("", rootUrl, fileName, this.bjs_scene);
+        // 1. PhaserのJSONキャッシュからアセット定義を取得
+        const assetDefine = this.cache.json.get('asset_define');
+        
+        // 2. キーを使ってモデルのパス情報を取得
+        let modelPath = null;
+        if (assetDefine && assetDefine.models && assetDefine.models[this.modelKey]) {
+            modelPath = assetDefine.models[this.modelKey];
+        } else {
+            console.error(`VoxelScene: モデルキー[${this.modelKey}]がasset_define.jsonに見つかりません。`);
+        }
 
-            console.log("VoxelScene: モデルのロードに成功しました！", result);
+        // 3. パス情報を使ってモデルをロード
+        if (modelPath) {
+            console.log(`VoxelScene: モデル[${this.modelKey}]のロードを開始します...`);
 
-            // ロードしたモデルの最初のメッシュを取得 (通常は__root__という名前)
-            const model = result.meshes[0];
-            
-            // モデルのサイズや位置を調整
-            model.scaling.scaleInPlace(1.0); // まずは等倍で表示
-            model.position = new BABYLON.Vector3(0, 0, 0); // 原点に配置
+            try {
+                const result = await SceneLoader.ImportMeshAsync("", modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
+                console.log("VoxelScene: モデルのロードに成功しました！", result);
 
-            // もしアニメーションがあれば、最初のアニメーションをループ再生
-            if (result.animationGroups && result.animationGroups.length > 0) {
-                const animationGroup = result.animationGroups[0];
-                animationGroup.play(true); // trueでループ再生
-                console.log(`VoxelScene: アニメーション「${animationGroup.name}」を再生します。`);
+                const model = result.meshes[0];
+                model.scaling.scaleInPlace(1.0);
+                model.position = new BABYLON.Vector3(0, 0, 0);
+
+                if (result.animationGroups && result.animationGroups.length > 0) {
+                    result.animationGroups[0].play(true);
+                    console.log(`VoxelScene: アニメーション「${result.animationGroups[0].name}」を再生します。`);
+                }
+
+            } catch (error) {
+                console.error(`VoxelScene: モデル[${this.modelKey}]のロード中にエラーが発生しました。`, error);
+                this.add.text(100, 100, "Model Load Error!", { color: "red", fontSize: "32px" });
             }
-
-        } catch (error) {
-            console.error("VoxelScene: モデルのロード中にエラーが発生しました。", error);
-            // エラーが起きてもシーンが止まらないように、ここにエラーメッセージを表示するテキストなどを置くと親切
-            this.add.text(100, 100, "Model Load Error!", { color: "red", fontSize: "32px" });
         }
         
-        // ★★★ ここまでが変更箇所 ★★★
+        // ★★★ ここまでが修正箇所 ★★★
 
         this.bjs_engine.runRenderLoop(() => {
-            if (this.bjs_scene) {
-                this.bjs_scene.render();
-            }
+            if (this.bjs_scene) this.bjs_scene.render();
         });
 
         this.scale.on('resize', this.resize, this);
@@ -99,10 +100,7 @@ const SceneLoader = BABYLON.SceneLoader;
             this.scene.get('SystemScene').events.emit('return-to-novel', { from: 'VoxelScene' });
         });
     }
-    /**
-     * Babylon.jsがロードされるのを待つためのヘルパー関数
-     * @returns {Promise<void>}
-     */
+
     waitForBabylon() {
         return new Promise(resolve => {
             const check = () => {
@@ -110,7 +108,6 @@ const SceneLoader = BABYLON.SceneLoader;
                     console.log("Babylon.js is loaded.");
                     resolve();
                 } else {
-                    // 100ミリ秒後にもう一度チェック
                     setTimeout(check, 100); 
                 }
             };
@@ -119,15 +116,11 @@ const SceneLoader = BABYLON.SceneLoader;
     }
 
     resize(gameSize) {
-        if (this.bjs_engine) {
-            this.bjs_engine.resize();
-        }
+        if (this.bjs_engine) this.bjs_engine.resize();
     }
-
    
     shutdown() {
         console.log("VoxelScene: shutdown");
-
         const phaserContainer = document.getElementById('phaser-container');
         const bjsCanvasNode = document.getElementById('babylon-canvas');
         if (bjsCanvasNode) bjsCanvasNode.style.display = 'none';

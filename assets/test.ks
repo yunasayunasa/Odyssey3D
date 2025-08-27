@@ -6,7 +6,7 @@
 「ESCキーを押すと、このノベルパートに戻ってきます。」
 [p]
 
-[jump storage=VoxelScene]
+[jump storage=VoxelScene params="{ modelKey: 'stage_01' }"]
 
 「おかえりなさい！[br]3Dシーンから無事に戻ってこれました。」[p]
 [s]
