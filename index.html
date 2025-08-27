@@ -19,8 +19,14 @@
     </style>
 </head>
 <body>
+       <!-- ★★★ Babylon.js専用のcanvasを追加 ★★★ -->
+    <!-- 普段は非表示にしておき、VoxelSceneで表示する -->
+    <canvas id="babylon-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; display: none;"></style>
+
+    <!-- Phaserのゲーム画面コンテナ (これはz-indexが高い) -->
+    <div id="phaser-game" style="position: absolute; top: 0; left: 0; z-index: 1;"></div>
     <!-- ゲーム画面のコンテナ -->
-    <div id="phaser-game"></div>
+   
 
     <!-- ★★★ 回転促進オーバーレイ（普段は隠しておく）★★★ -->
     <div id="orientation-overlay" style="display: none;">

@@ -37,19 +37,19 @@ export default class VoxelScene extends Phaser.Scene {
         const gameHeight = this.scale.height;
 
         // 1. Babylon.jsを描画するためのcanvas要素を、PhaserのDOM要素として追加
-        this.bjs_canvas = this.add.dom(0, 0, 'canvas', {
-            width: `${gameWidth}px`,
-            height: `${gameHeight}px`,
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            'z-index': '-1' // Phaserのcanvasより後ろに表示
-        }).setOrigin(0, 0);
+       // 1. HTMLからBabylon.js用のcanvasを取得
+        const bjsCanvasNode = document.getElementById('babylon-canvas');
+        if (!bjsCanvasNode) {
+            console.error("babylon-canvasが見つかりません！");
+            return;
+        }
+        
+        // canvasを表示状態にする
+        bjsCanvasNode.style.display = 'block';
 
         // 2. Babylon.jsのEngineとSceneを初期化
-        this.bjs_engine = new Engine(this.bjs_canvas.node, true);
+        this.bjs_engine = new Engine(bjsCanvasNode, true);
         this.bjs_scene = new Scene(this.bjs_engine);
-        this.bjs_scene.clearColor = new Color4(0.1, 0.1, 0.2, 1); // 背景色（紺色）
 
         // 3. カメラを作成し、操作できるようにする
         const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 15, Vector3.Zero(), this.bjs_scene);
@@ -109,7 +109,10 @@ export default class VoxelScene extends Phaser.Scene {
 
     shutdown() {
         console.log("VoxelScene: shutdown - リソースを破棄します。");
-        
+           const bjsCanvasNode = document.getElementById('babylon-canvas');
+        if (bjsCanvasNode) {
+            bjsCanvasNode.style.display = 'none';
+        }
         // イベントリスナーを解除
         this.scale.off('resize', this.resize, this);
         this.input.keyboard.off('keydown-ESC');
