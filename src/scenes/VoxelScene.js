@@ -8,7 +8,7 @@ export default class VoxelScene extends Phaser.Scene {
         super({ key: 'VoxelScene' });
         this.bjs_engine = null;
         this.bjs_scene = null;
-        this.modelKey = 'player_borntest'; // デフォルトで表示するモデルのキー
+        this.modelKey = 'stage_01'; // デフォルトで表示するモデルのキー
     }
     
     // シナリオからデータを受け取る
