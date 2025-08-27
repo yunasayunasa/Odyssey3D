@@ -31,10 +31,30 @@
             "rootUrl": "assets/models/",
             "fileName": "Stage.glb"
         },
-        "item_sword": {
-            "rootUrl": "https://some-cdn.com/models/",
-            "fileName": "sword.glb"
+        "ground_basic": {
+            "rootUrl": "assets/models/",
+            "fileName": "Stage.glb"
         }
     
-  }
+  },
+    "stages": {
+        "stage_01_tutorial": {
+            "name": "Tutorial Stage",
+            "playerSpawn": { "x": 0, "y": 0.5, "z": 0 },
+            "objects": [
+                {
+                    "key": "ground_basic",
+                    "name": "ground",
+                    "position": { "x": 0, "y": -0.5, "z": 0 },
+                    "scale": { "x": 10, "y": 1, "z": 10 }
+                },
+                {
+                    "key": "player_borntest",
+                    "name": "player",
+                    "position": { "x": 0, "y": 0, "z": 0 },
+                    "scale": { "x": 1, "y": 1, "z": 1 }
+                }
+            ]
+        }
+    }
   }
