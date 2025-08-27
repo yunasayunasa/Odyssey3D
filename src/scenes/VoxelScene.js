@@ -13,10 +13,12 @@ export default class VoxelScene extends Phaser.Scene {
     
     // シナリオからデータを受け取る
     init(data) {
+         console.log("VoxelScene init() received data:", data);
         // [jump]タグのparamsで指定されたmodelKeyを受け取る
         if (data && data.modelKey) {
             this.modelKey = data.modelKey;
         }
+          console.log(`VoxelScene: Target model key is set to: ${this.modelKey}`);
     }
 
     async create() {

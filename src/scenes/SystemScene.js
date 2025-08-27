@@ -53,26 +53,20 @@ export default class SystemScene extends Phaser.Scene {
      /**
      * [jump]などによるシーン遷移リクエストを処理 (修正版)
      */
-       _handleRequestSceneTransition(data) {
-        console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`);
-        
-        // ★ BGMの操作は一切しない ★
+     _handleRequestSceneTransition(data) {
+    console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`);
+    
+    if (this.scene.isActive(data.from)) {
+        this.scene.stop(data.from); 
+    }
+    if (this.scene.isActive('UIScene')) {
+        this.scene.get('UIScene').setVisible(false);
+    }
 
-        if (this.scene.isActive(data.from)) {
-            this.scene.stop(data.from); 
-        }
-        if (this.scene.isActive('UIScene')) {
-            this.scene.get('UIScene').setVisible(false);
-        }
-
-
-        // ★ 4. 新しいシーンを起動
-        // BattleSceneのinitに渡すデータ構造を調整
-        this._startAndMonitorScene(data.to, { 
-            // BattleSceneのinitが `data.transitionParams` を期待している場合
-            transitionParams: data.params 
-        });
-    };
+    // ★★★ 修正箇所 ★★★
+    // [jump]タグのparams属性で指定されたオブジェクトを、そのまま渡す
+    this._startAndMonitorScene(data.to, data.params);
+};
     
 
    /**
