@@ -48,7 +48,8 @@ export default class VoxelScene extends Phaser.Scene {
         this.bjs_scene.clearColor = new Color4(0.1, 0.1, 0.2, 1);
 
         const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 30, new Vector3(0, 5, 0));
-        camera.attachControl(bjsCanvasNode, true);
+        camera.attachControl(bjsCanvasNode, true, false);
+        camera.inputs.remove(camera.inputs.attached.keyboard);
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.bjs_scene);
 
         // --- 物理エンジンのセットアップ ---
@@ -93,7 +94,8 @@ export default class VoxelScene extends Phaser.Scene {
                 if (obj.scale) {
                     mainMesh.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
                 }
-
+                // モデルの回転をリセットして、まっすぐ立たせる
+                mainMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
                 // 3. 親を持たない、独立したメッシュに物理ボディを設定
                 if (obj.key === 'ground_basic') {
                     mainMesh.physicsImpostor = new PhysicsImpostor(mainMesh, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
