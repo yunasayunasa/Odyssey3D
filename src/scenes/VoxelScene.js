@@ -160,16 +160,25 @@ export default class VoxelScene extends Phaser.Scene {
         if (this.bjs_engine) this.bjs_engine.resize();
     }
     
-   playerJump() {
+  playerJump() {
     if (!this.player || !this.player.physicsImpostor) return;
 
-    // Raycastによる正確な接地判定
-    const origin = this.player.position;
-    const ray = new BABYLON.Ray(origin, new BABYLON.Vector3(0, -1, 0), this.player.getBoundingInfo().boundingBox.extendSize.y + 0.1);
-    const hit = this.bjs_scene.pickWithRay(ray);
+    // ★★★ 物理ボディの状態を直接チェックする方法 ★★★
+    // 1. まず、Y方向の速度がごくわずか（上昇も下降もしていない）であることを確認
+    const velocity = this.player.physicsImpostor.getLinearVelocity();
+    if (Math.abs(velocity.y) > 0.1) {
+        return; // 上昇中または落下中はジャンプしない
+    }
 
-    // レイが地面（または何か）に当たった場合のみジャンプを許可
-    if (hit.hit) {
+    // 2. 次に、足元からレイを飛ばして、地面との距離をチェック
+    const origin = this.player.position;
+    const ray = new BABYLON.Ray(origin, new BABYLON.Vector3(0, -1, 0));
+    const hit = this.bjs_scene.pickWithRay(ray, (mesh) => {
+        return mesh.name === "ground"; // "ground"という名前のメッシュのみを衝突対象とする
+    });
+
+    // 3. レイが非常に近い距離で地面に当たった場合のみジャンプを許可
+    if (hit.hit && hit.distance < (this.player.getBoundingInfo().boundingBox.extendSize.y + 0.2)) {
         this.player.physicsImpostor.applyImpulse(
             new BABYLON.Vector3(0, 15, 0),
             this.player.getAbsolutePosition()
@@ -183,35 +192,44 @@ update(time, delta) {
     const speed = 5;
     const velocity = this.player.physicsImpostor.getLinearVelocity();
     
-    // Y方向の速度は物理エンジンに任せる
-    const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
+    // --- 1. カメラの向きを取得 ---
+    const cameraForward = this.bjs_scene.activeCamera.getForwardRay().direction;
+    const cameraRight = BABYLON.Vector3.Cross(BABYLON.Vector3.Up(), cameraForward).normalize();
+    // Y成分を無視して、水平な移動ベクトルにする
+    cameraForward.y = 0;
+    cameraRight.y = 0;
 
-    // ★ 左右の移動ベクトル
-    if (this.cursors.left.isDown) {
-        newVelocity.x = -speed;
-    } else if (this.cursors.right.isDown) {
-        newVelocity.x = speed;
-    }
-    // ★ 前後の移動ベクトル
+    // --- 2. 入力に基づいて、カメラ基準の移動ベクトルを生成 ---
+    let moveDirection = BABYLON.Vector3.Zero();
     if (this.cursors.up.isDown) {
-        newVelocity.z = speed;
-    } else if (this.cursors.down.isDown) {
-        newVelocity.z = -speed;
+        moveDirection.addInPlace(cameraForward); // 奥へ
+    }
+    if (this.cursors.down.isDown) {
+        moveDirection.subtractInPlace(cameraForward); // 手前へ
+    }
+    if (this.cursors.left.isDown) {
+        moveDirection.addInPlace(cameraRight.scale(-1)); // 左へ
+    }
+    if (this.cursors.right.isDown) {
+        moveDirection.addInPlace(cameraRight); // 右へ
     }
 
-    // ★★★ 移動方向への自動的な方向転換 ★★★
-    // 物理ボディの速度がゼロでない（＝動いている）場合
-    if (Math.abs(newVelocity.x) > 0.1 || Math.abs(newVelocity.z) > 0.1) {
-        // 移動ベクトル（newVelocity）の方向を向くように、キャラクターの向き（rotation.y）を計算
-        const moveDirection = new BABYLON.Vector3(newVelocity.x, 0, newVelocity.z).normalize();
-        // ★ atan2の引数は(x, z)
-        const targetRotation = Math.atan2(moveDirection.x, moveDirection.z);
+    // --- 3. 移動ベクトルの正規化と速度の設定 ---
+    const newVelocity = new BABYLON.Vector3(0, velocity.y, 0); // Y速度は維持
+    if (moveDirection.length() > 0.1) {
+        moveDirection.normalize();
         
-        // 現在の回転角度から目標の回転角度へ、滑らかに補間 (Lerp)
-        // (これにより、向きがパッと変わるのではなく、くるっと滑らかに変わる)
+        // ★ 移動方向へキャラクターを向ける
+        const targetRotation = Math.atan2(moveDirection.x, moveDirection.z);
         this.player.rotation.y = BABYLON.Scalar.Lerp(this.player.rotation.y, targetRotation, 0.2);
-    }
 
+        // ★ 移動ベクトルに速度を適用
+        const finalMove = moveDirection.scale(speed);
+        newVelocity.x = finalMove.x;
+        newVelocity.z = finalMove.z;
+    }
+    
+    // 最終的な速度を物理ボディに設定
     this.player.physicsImpostor.setLinearVelocity(newVelocity);
 }
    
