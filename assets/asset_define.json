@@ -51,7 +51,7 @@
                 {
                     "key": "player_borntest",
                     "name": "player",
-                    "position": { "x": 0, "y": 10, "z": -10 },
+                    "position": { "x": 50, "y": 100, "z": -50 },
                     "scale": { "x": 0.5, "y": 0.5, "z": 0.5 }
                 }
             ]
