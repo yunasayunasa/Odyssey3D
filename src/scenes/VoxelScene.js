@@ -62,44 +62,71 @@ async create() {
 
     console.log(`VoxelScene: ステージ「${stageData.name}」のモデルをロードします...`);
     
-    for (const obj of stageData.objects) {
-        const modelKey = obj.key;
-        const modelPath = assetDefine.models[modelKey];
-        if (!modelPath) {
-            console.warn(`モデルキー[${modelKey}]が見つかりません。`);
-            continue;
-        }
+    // VoxelScene.js -> create()メソッドのforループ内
+
+for (const obj of stageData.objects) {
+    const modelKey = obj.key;
+    const modelPath = assetDefine.models[modelKey];
+    if (!modelPath) { continue; }
+    
+    try {
+        const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
         
-        // ★★★ try...catchブロックの範囲を修正 ★★★
-        try {
-            const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
+        // ★★★ ここからが最終・確定の修正箇所 ★★★
+        
+        // ロードされたモデルの親ノードを取得
+        const rootNode = result.meshes[0];
+        rootNode.name = obj.name;
+        
+        // 親ノードのすべての子メッシュを取得
+        const childMeshes = rootNode.getChildMeshes();
+
+        childMeshes.forEach(childMesh => {
+            // 1. 子メッシュを親から切り離す
+            childMesh.setParent(null);
             
-            const rootNode = result.meshes[0];
-            rootNode.name = obj.name;
-            rootNode.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
+            // 2. 子メッシュの位置とスケールを、JSONで定義された値に直接設定する
+            childMesh.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
             if (obj.scale) {
-                rootNode.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
+                // ボクセルモデルは回転・拡縮の中心がずれることがあるため、BoundingBoxから正確なサイズを計算する
+                const boundingBox = childMesh.getBoundingInfo().boundingBox;
+                const size = boundingBox.maximumWorld.subtract(boundingBox.minimumWorld);
+                childMesh.scaling.x *= obj.scale.x / size.x;
+                childMesh.scaling.y *= obj.scale.y / size.y;
+                childMesh.scaling.z *= obj.scale.z / size.z;
             }
-            
-            rootNode.getChildMeshes().forEach(childMesh => {
-                if (obj.key === 'ground_basic') {
-                    childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
-                } else if (obj.key === 'player_borntest') {
-                    childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
-                    this.player = rootNode; 
-                    childMesh.physicsImpostor.physicsBody.angularDamping = 1.0;
-                }
-            });
 
-            if (result.animationGroups.length > 0) {
-                result.animationGroups[0].play(true);
+            // 3. 独立した子メッシュに物理ボディを設定する
+            if (obj.key === 'ground_basic') {
+                childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
+            } else if (obj.key === 'player_borntest') {
+                childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
+                
+                // ★ プレイヤーオブジェクトとして、子メッシュそのものを保持する
+                this.player = childMesh; 
+                
+                childMesh.physicsImpostor.physicsBody.angularDamping = 1.0;
             }
-            console.log(`モデル「${rootNode.name}」を配置し、物理ボディを設定しました。`);
+        });
 
-        } catch (error) {
-            console.error(`モデル[${modelKey}]のロードまたは設定中にエラーが発生しました。`, error);
-        }
+        // 4. アニメーションは、独立させた子メッシュに紐付け直す必要がある場合がある
+        //    今回はまず物理を優先するため、アニメーション再生は一旦コメントアウト
+        // if (result.animationGroups.length > 0) {
+        //     // AnimationGroupのターゲットを新しい独立メッシュに変更する必要がある
+        //     // const animationGroup = result.animationGroups[0].clone();
+        //     // animationGroup.addTargetedAnimation(animationGroup.targetedAnimations[0].animation, childMeshes[0]);
+        //     // animationGroup.play(true);
+        // }
+
+        // 5. 使い終わった親ノードは破棄する
+        rootNode.dispose();
+        
+        console.log(`モデル「${obj.name}」を独立させて配置し、物理ボディを設定しました。`);
+        
+    } catch (error) {
+        console.error(`モデル[${modelKey}]のロードまたは設定中にエラーが発生しました。`, error);
     }
+}
 
     // --- 入力設定 ---
     this.cursors = this.input.keyboard.createCursorKeys();
