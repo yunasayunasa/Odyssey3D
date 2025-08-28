@@ -178,23 +178,44 @@ export default class VoxelScene extends Phaser.Scene {
     }
     
     update(time, delta) {
-        if (!this.player || !this.player.physicsImpostor) return;
-        const speed = 5;
-        const velocity = this.player.physicsImpostor.getLinearVelocity();
-        const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
+    if (!this.player || !this.player.physicsImpostor) return;
 
-        if (this.cursors.left.isDown) {
-            newVelocity.x = -speed;
-            this.player.rotation.y = Math.PI;
-        } else if (this.cursors.right.isDown) {
-            newVelocity.x = speed;
-            this.player.rotation.y = 0;
-        } else {
-            newVelocity.x = 0;
-        }
-        
-        this.player.physicsImpostor.setLinearVelocity(newVelocity);
+    const speed = 5;
+    const velocity = this.player.physicsImpostor.getLinearVelocity();
+    
+    // ★★★ Y方向の速度は常に物理エンジンに任せる ★★★
+    const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
+
+    // ★★★ X方向（左右）の速度を制御 ★★★
+    if (this.cursors.left.isDown) {
+        newVelocity.x = -speed;
+    } else if (this.cursors.right.isDown) {
+        newVelocity.x = speed;
     }
+
+    // ★★★ Z方向（前後）の速度を制御 ★★★
+    if (this.cursors.up.isDown) {
+        newVelocity.z = speed; // 奥へ進む
+    } else if (this.cursors.down.isDown) {
+        newVelocity.z = -speed; // 手前へ進む
+    }
+
+    // ★★★ 移動方向への自動的な方向転換 ★★★
+    if (newVelocity.x !== 0 || newVelocity.z !== 0) {
+        // 移動ベクトル（newVelocity）の方向を向くように、キャラクターの向きを滑らかに変える
+        // (Y軸の回転だけを変えたいので、Y成分は0にする)
+        const moveDirection = new BABYLON.Vector3(newVelocity.x, 0, newVelocity.z).normalize();
+        const targetRotation = Math.atan2(moveDirection.x, moveDirection.z);
+        
+        // 現在の回転角度から目標の回転角度へ、滑らかに補間する (Slerp)
+        const currentRotation = this.player.rotation.y;
+        let shortestAngle = ((((targetRotation - currentRotation) % (2 * Math.PI)) + (3 * Math.PI)) % (2 * Math.PI)) - Math.PI;
+        this.player.rotation.y += shortestAngle * 0.1; // 0.1は回転の速さ
+    }
+    
+    // 最終的な速度を物理ボディに設定
+    this.player.physicsImpostor.setLinearVelocity(newVelocity);
+}
    
     shutdown() {
         console.log("VoxelScene: shutdown");
