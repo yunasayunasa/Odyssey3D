@@ -75,68 +75,51 @@ export default class VoxelScene extends Phaser.Scene {
             }
             
             try {
-                const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
-                
-                const rootNode = result.meshes[0];
-                const childMeshes = rootNode.getChildMeshes();
-                if (childMeshes.length === 0) {
-                    rootNode.dispose();
-                    continue;
-                }
-                const mainMesh = childMeshes[0];
-
-                // 1. 親から子メッシュを切り離し、独立させる
-                mainMesh.setParent(null);
-                
-                // 2. 独立した子メッシュに、JSONで定義されたプロパティを設定
-                mainMesh.name = obj.name;
-                mainMesh.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
-                if (obj.scale) {
-                    mainMesh.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
-                }
-                // モデルの回転をリセットして、まっすぐ立たせる
-                mainMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
-                // 3. 親を持たない、独立したメッシュに物理ボディを設定
-                if (obj.key === 'ground_basic') {
-                    mainMesh.physicsImpostor = new PhysicsImpostor(mainMesh, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
-                } else if (obj.key === 'player_borntest') {
-    // 1. 親となる、空っぽのTransformNodeを作成 (これが本当のプレイヤーオブジェクト)
-    const playerRoot = new BABYLON.TransformNode("player_root", this.bjs_scene);
-    playerRoot.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
-    
-    // 2. 見た目のメッシュを、その子にする
-    mainMesh.setParent(playerRoot);
-    mainMesh.position = new Vector3(0, 0, 0); // 親からの相対位置
-
-    // 3. 物理ボディは、親のTransformNodeに設定する
-    playerRoot.physicsImpostor = new PhysicsImpostor(mainMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
-    
-    this.player = playerRoot; // ★ プレイヤーとして、親のTransformNodeを保持
-    
-    playerRoot.physicsImpostor.physicsBody.angularDamping = 1.0;
-}
-                
-                // 4. アニメーションを、独立したメッシュに紐付け直す
-                if (result.animationGroups.length > 0) {
-                    const animationGroup = result.animationGroups[0];
-                    animationGroup.stop();
-                    // アニメーションのターゲットを新しい独立メッシュに変更
-                    const targetedAnimation = animationGroup.targetedAnimations[0];
-                    if (targetedAnimation) {
-                        animationGroup.removeTargetedAnimation(targetedAnimation.animation);
-                        animationGroup.addTargetedAnimation(targetedAnimation.animation, mainMesh);
-                    }
-                    animationGroup.play(true);
-                }
-
-                // 5. 役目を終えた親ノードと、他の不要な子メッシュは破棄
+            const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
+            const rootNode = result.meshes[0];
+            const childMeshes = rootNode.getChildMeshes();
+            if (childMeshes.length === 0) {
                 rootNode.dispose();
-                for (let i = 1; i < childMeshes.length; i++) {
-                    childMeshes[i].dispose();
-                }
+                continue;
+            }
+            const mainMesh = childMeshes[0];
 
-                console.log(`モデル「${obj.name}」を独立させて配置し、物理ボディを設定しました。`);
-                
+            // 1. 親から子メッシュを切り離し、独立させる
+            mainMesh.setParent(null);
+            
+            // 2. 独立した子メッシュにプロパティを設定
+            mainMesh.name = obj.name;
+            mainMesh.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
+            if (obj.scale) {
+                mainMesh.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
+            }
+
+            // 3. 独立したメッシュに物理ボディを設定
+            if (obj.key === 'ground_basic') {
+                mainMesh.physicsImpostor = new PhysicsImpostor(mainMesh, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
+            } else if (obj.key === 'player_borntest') {
+                mainMesh.physicsImpostor = new PhysicsImpostor(mainMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
+                this.player = mainMesh; 
+                this.player.physicsImpostor.physicsBody.angularDamping = 1.0;
+            }
+            
+            // 4. アニメーションを独立メッシュに紐付け直し
+            if (result.animationGroups.length > 0) {
+                const animationGroup = result.animationGroups[0];
+                animationGroup.stop();
+                const targetedAnimation = animationGroup.targetedAnimations[0];
+                if (targetedAnimation) {
+                    animationGroup.removeTargetedAnimation(targetedAnimation.animation);
+                    animationGroup.addTargetedAnimation(targetedAnimation.animation, mainMesh);
+                }
+                animationGroup.play(true);
+            }
+
+            // 5. 役目を終えた親ノード等は破棄
+            rootNode.dispose();
+            for (let i = 1; i < childMeshes.length; i++) {
+                childMeshes[i].dispose();
+            }
             } catch (error) {
                 console.error(`モデル[${modelKey}]のロードまたは設定中にエラーが発生しました。`, error);
             }
@@ -177,19 +160,15 @@ export default class VoxelScene extends Phaser.Scene {
         if (this.bjs_engine) this.bjs_engine.resize();
     }
     
-    playerJump() {
+   playerJump() {
     if (!this.player || !this.player.physicsImpostor) return;
 
-    // ★★★ Raycastによる接地判定 ★★★
+    // Raycastによる正確な接地判定
     const origin = this.player.position;
-    // キャラクターの足元から、ほんの少し下に向けてレイを飛ばす
-    const ray = new BABYLON.Ray(origin, new BABYLON.Vector3(0, -1, 0), 1.1); 
-    const hit = this.bjs_scene.pickWithRay(ray, (mesh) => {
-        // 自分自身との衝突は無視
-        return mesh !== this.player.getChildMeshes()[0]; 
-    });
+    const ray = new BABYLON.Ray(origin, new BABYLON.Vector3(0, -1, 0), this.player.getBoundingInfo().boundingBox.extendSize.y + 0.1);
+    const hit = this.bjs_scene.pickWithRay(ray);
 
-    // レイが地面に当たった場合のみジャンプを許可
+    // レイが地面（または何か）に当たった場合のみジャンプを許可
     if (hit.hit) {
         this.player.physicsImpostor.applyImpulse(
             new BABYLON.Vector3(0, 15, 0),
@@ -197,34 +176,43 @@ export default class VoxelScene extends Phaser.Scene {
         );
     }
 }
-    
-   update(time, delta) {
+
+update(time, delta) {
     if (!this.player || !this.player.physicsImpostor) return;
 
     const speed = 5;
     const velocity = this.player.physicsImpostor.getLinearVelocity();
-    const newVelocity = new BABYLON.Vector3(velocity.x * 0.9, velocity.y, velocity.z * 0.9); // 減速
+    
+    // Y方向の速度は物理エンジンに任せる
+    const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
 
-    let moveVector = Vector3.Zero();
-    if (this.cursors.left.isDown)  moveVector.x = -1;
-    if (this.cursors.right.isDown) moveVector.x = 1;
-    if (this.cursors.up.isDown)    moveVector.z = 1;
-    if (this.cursors.down.isDown)  moveVector.z = -1;
-
-    if (moveVector.length() > 0) {
-        moveVector.normalize(); // ベクトルを正規化
-        
-        // ★★★ 見た目の回転（親を回転させる）★★★
-        const targetRotation = Math.atan2(moveVector.x, moveVector.z);
-        this.player.rotation.y = BABYLON.Scalar.Lerp(this.player.rotation.y, targetRotation, 0.2);
-
-        // ★★★ 物理的な移動 ★★★
-        const moveVelocity = moveVector.scale(speed);
-        this.player.physicsImpostor.setLinearVelocity(new BABYLON.Vector3(moveVelocity.x, velocity.y, moveVelocity.z));
-    } else {
-        // キーが押されていなければ減速
-        this.player.physicsImpostor.setLinearVelocity(new BABYLON.Vector3(velocity.x * 0.9, velocity.y, velocity.z * 0.9));
+    // ★ 左右の移動ベクトル
+    if (this.cursors.left.isDown) {
+        newVelocity.x = -speed;
+    } else if (this.cursors.right.isDown) {
+        newVelocity.x = speed;
     }
+    // ★ 前後の移動ベクトル
+    if (this.cursors.up.isDown) {
+        newVelocity.z = speed;
+    } else if (this.cursors.down.isDown) {
+        newVelocity.z = -speed;
+    }
+
+    // ★★★ 移動方向への自動的な方向転換 ★★★
+    // 物理ボディの速度がゼロでない（＝動いている）場合
+    if (Math.abs(newVelocity.x) > 0.1 || Math.abs(newVelocity.z) > 0.1) {
+        // 移動ベクトル（newVelocity）の方向を向くように、キャラクターの向き（rotation.y）を計算
+        const moveDirection = new BABYLON.Vector3(newVelocity.x, 0, newVelocity.z).normalize();
+        // ★ atan2の引数は(x, z)
+        const targetRotation = Math.atan2(moveDirection.x, moveDirection.z);
+        
+        // 現在の回転角度から目標の回転角度へ、滑らかに補間 (Lerp)
+        // (これにより、向きがパッと変わるのではなく、くるっと滑らかに変わる)
+        this.player.rotation.y = BABYLON.Scalar.Lerp(this.player.rotation.y, targetRotation, 0.2);
+    }
+
+    this.player.physicsImpostor.setLinearVelocity(newVelocity);
 }
    
     shutdown() {
