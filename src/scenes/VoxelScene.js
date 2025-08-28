@@ -45,7 +45,17 @@ export default class VoxelScene extends Phaser.Scene {
         this.bjs_scene = new Scene(this.bjs_engine);
         this.bjs_scene.clearColor = new Color4(0.1, 0.1, 0.2, 1);
 
-        const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 30, new Vector3(0, 5, 0));
+      //  const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 30, new Vector3(0, 5, 0));
+         // 1. FollowCamera を生成
+    const camera = new BABYLON.FollowCamera("FollowCam", new Vector3(0, 10, -10), this.bjs_scene);
+
+    // 2. カメラの追従パラメータを設定
+    camera.radius = 15; // キャラクターからの距離
+    camera.heightOffset = 8; // キャラクターの頭上からの高さ
+    camera.rotationOffset = 0; // キャラクターの真後ろからの角度 (0 = 真後ろ)
+    camera.cameraAcceleration = 0.05; // カメラの追従の滑らかさ
+    camera.maxCameraSpeed = 10; // カメラの最大移動速度
+
         camera.attachControl(bjsCanvasNode, true);
         camera.inputs.remove(camera.inputs.attached.keyboard); // ★ カメラのキーボード操作を無効化
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.bjs_scene);
@@ -89,6 +99,7 @@ export default class VoxelScene extends Phaser.Scene {
                 } else if (obj.key === 'player_borntest') {
                     mainMesh.physicsImpostor = new PhysicsImpostor(mainMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
                     this.player = mainMesh; 
+                         camera.lockedTarget = this.player; // ★ カメラの追従ターゲットをプレイヤーに設定
                     this.player.physicsImpostor.physicsBody.angularDamping = 1.0;
                     
                     if (result.animationGroups.length > 0) {
