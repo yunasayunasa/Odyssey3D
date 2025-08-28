@@ -210,36 +210,45 @@ update(time, delta) {
     if (this.cursors.left.isDown)  moveDirection.addInPlace(cameraRight.scale(-1));
     if (this.cursors.right.isDown) moveDirection.addInPlace(cameraRight);
     if (this.cursors.up.isDown)    moveDirection.addInPlace(cameraForward);
-    if (this.cursors.down.isDown)  moveDirection.addInPlace(cameraForward.scale(-1)); // 修正: 手前はforwardの逆
+    if (this.cursors.down.isDown)  moveDirection.addInPlace(cameraForward.scale(-1));
 
+    // Y方向の速度は物理エンジンに任せる
     const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
 
     if (moveDirection.length() > 0.1) {
         moveDirection.normalize();
+        
+        // ★★★ ここからが修正箇所 ★★★
+
+        // 1. 移動方向から目標となる回転（クォータニオン）を計算
+        //    これはBabylon.jsの世界の計算
+        const targetRotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(moveDirection, BABYLON.Vector3.Up());
+        
+        // 2. キャラクターの「見た目」の回転を、目標に向かって滑らかに補間
+        //    これもBabylon.jsの世界の計算
+        const currentRotationQuaternion = this.player.rotationQuaternion || BABYLON.Quaternion.Identity();
+        const slerpedQuaternion = BABYLON.Quaternion.Slerp(currentRotationQuaternion, targetRotationQuaternion, 0.2);
+
+        // 3. 計算した回転を、キャラクターの「見た目」に適用
+        this.player.rotationQuaternion = slerpedQuaternion;
+
+        // ★★★ ここまでが修正箇所 ★★★
+
+        // 4. 移動速度を計算し、物理ボディに適用
         const finalMove = moveDirection.scale(speed);
         newVelocity.x = finalMove.x;
         newVelocity.z = finalMove.z;
-        
-        // ★★★ ここからが修正箇所 ★★★
-        // 1. 移動方向から目標となる回転（クォータニオン）を計算
-        const targetRotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(moveDirection, BABYLON.Vector3.Up());
-        
-        // 2. 現在の物理ボディの回転から目標の回転へ、滑らかに補間(Slerp)
-        const currentRotationQuaternion = this.player.physicsImpostor.physicsBody.quaternion;
-        const slerpedQuaternion = BABYLON.Quaternion.Slerp(currentRotationQuaternion, targetRotationQuaternion, 0.2);
-
-        // 3. 補間した回転を、物理ボディに直接設定する
-        this.player.physicsImpostor.setAngularVelocity(BABYLON.Vector3.Zero()); // まず回転速度をリセット
-        this.player.physicsImpostor.physicsBody.quaternion = slerpedQuaternion;
-        // ★★★ ここまでが修正箇所 ★★★
 
     } else {
-        // キーが押されていなければ、XとZの速度をゼロにする（ピタッと止まる）
         newVelocity.x = 0;
         newVelocity.z = 0;
     }
     
+    // 最終的な「速度」だけを物理ボディに設定する
     this.player.physicsImpostor.setLinearVelocity(newVelocity);
+
+    // ★ 物理ボディの回転は、常に「見た目」の回転と同期させる
+    this.player.physicsImpostor.setAngularVelocity(BABYLON.Vector3.Zero()); // まず回転速度をリセット
 }
    
     shutdown() {
