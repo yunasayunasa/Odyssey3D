@@ -24,21 +24,17 @@ export default class VoxelScene extends Phaser.Scene {
 
  // VoxelScene.js -> create()メソッド
 
+// VoxelScene.js -> create()メソッド (最終・完全版)
+
 async create() {
     console.log("VoxelScene: create - 3Dシーンの構築を開始します。");
     await this.waitForBabylon();
 
-    const BABYLON = window.BABYLON;
-    const CANNON = window.CANNON;
-    const Scene = BABYLON.Scene;
-    const Engine = BABYLON.Engine;
-    const SceneLoader = BABYLON.SceneLoader;
-    const ArcRotateCamera = BABYLON.ArcRotateCamera;
-    const Vector3 = BABYLON.Vector3;
-    const HemisphericLight = BABYLON.HemisphericLight;
-    const Color4 = BABYLON.Color4;
-    const CannonJSPlugin = BABYLON.CannonJSPlugin;
-    const PhysicsImpostor = BABYLON.PhysicsImpostor;
+    const BABYLON = window.BABYLON, CANNON = window.CANNON;
+    const Scene = BABYLON.Scene, Engine = BABYLON.Engine, SceneLoader = BABYLON.SceneLoader;
+    const ArcRotateCamera = BABYLON.ArcRotateCamera, Vector3 = BABYLON.Vector3;
+    const HemisphericLight = BABYLON.HemisphericLight, Color4 = BABYLON.Color4;
+    const CannonJSPlugin = BABYLON.CannonJSPlugin, PhysicsImpostor = BABYLON.PhysicsImpostor;
 
     // --- レイヤー管理 ---
     const phaserContainer = document.getElementById('phaser-container');
@@ -66,7 +62,6 @@ async create() {
 
     console.log(`VoxelScene: ステージ「${stageData.name}」のモデルをロードします...`);
     
-    // ★★★ ここからが修正されたループ ★★★
     for (const obj of stageData.objects) {
         const modelKey = obj.key;
         const modelPath = assetDefine.models[modelKey];
@@ -75,49 +70,36 @@ async create() {
             continue;
         }
         
+        // ★★★ try...catchブロックの範囲を修正 ★★★
         try {
-    const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
-    
-    // ★★★ ここからが修正箇所 ★★★
-    
-    // ロードされたモデルの親ノードを取得
-    const rootNode = result.meshes[0];
-    rootNode.name = obj.name;
+            const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
+            
+            const rootNode = result.meshes[0];
+            rootNode.name = obj.name;
+            rootNode.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
+            if (obj.scale) {
+                rootNode.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
+            }
+            
+            rootNode.getChildMeshes().forEach(childMesh => {
+                if (obj.key === 'ground_basic') {
+                    childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
+                } else if (obj.key === 'player_borntest') {
+                    childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
+                    this.player = rootNode; 
+                    childMesh.physicsImpostor.physicsBody.angularDamping = 1.0;
+                }
+            });
 
-    // JSONで定義された位置とスケールを、親ノードに適用
-    rootNode.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
-    if (obj.scale) {
-        rootNode.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.y); // YをZにコピーするミスがあったので修正
-    }
-    
-    // 親ノードのすべての子メッシュをループ処理
-    rootNode.getChildMeshes().forEach(childMesh => {
-        // ★ 実際にジオメトリを持つ「子メッシュ」に対して物理ボディを設定する
-        if (obj.key === 'ground_basic') {
-            childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
-            console.log(`メッシュ「${childMesh.name}」に静的な物理ボディを設定しました。`);
-        } else if (obj.key === 'player_borntest') {
-            // ★ プレイヤーの当たり判定も、子メッシュに設定
-            childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
-            
-            // ★ 親ノードをプレイヤーとして保持する
-            this.player = rootNode; 
-            
-            // ★ 物理ボディを持つのは子メッシュだが、回転禁止などは子メッシュに設定
-            childMesh.physicsImpostor.physicsBody.angularDamping = 1.0;
-            
-            console.log(`メッシュ「${childMesh.name}」に動的な物理ボディを設定しました。`);
-        }
-    });
             if (result.animationGroups.length > 0) {
                 result.animationGroups[0].play(true);
             }
+            console.log(`モデル「${rootNode.name}」を配置し、物理ボディを設定しました。`);
 
         } catch (error) {
-            console.error(`モデル[${modelKey}]のロード中にエラーが発生しました。`, error);
+            console.error(`モデル[${modelKey}]のロードまたは設定中にエラーが発生しました。`, error);
         }
     }
-    // ★★★ ループ終了 ★★★
 
     // --- 入力設定 ---
     this.cursors = this.input.keyboard.createCursorKeys();
