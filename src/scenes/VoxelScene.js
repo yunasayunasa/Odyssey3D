@@ -8,8 +8,7 @@ const HemisphericLight = BABYLON.HemisphericLight, Color4 = BABYLON.Color4;
 const CannonJSPlugin = BABYLON.CannonJSPlugin, PhysicsImpostor = BABYLON.PhysicsImpostor;
 const Quaternion = BABYLON.Quaternion, Scalar = BABYLON.Scalar, Ray = BABYLON.Ray;
 // Babylon.jsのクラスをグローバルから取得
-const BABYLON = window.BABYLON;
-const CANNON = window.CANNON;
+
 
 export default class VoxelScene extends Phaser.Scene {
     constructor() {
