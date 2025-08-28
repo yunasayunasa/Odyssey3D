@@ -76,27 +76,39 @@ async create() {
         }
         
         try {
-            const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
-            const model = result.meshes[0];
-            model.name = obj.name;
-            model.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
-            if (obj.scale) {
-                model.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
-            }
-            
-            // 物理ボディ(Impostor)の追加を、ループの内側で行う
-            if (obj.key === 'ground_basic') {
-                // 床や壁のような「動かない」オブジェクト
-                model.physicsImpostor = new PhysicsImpostor(model, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
-                console.log(`モデル「${model.name}」に静的な物理ボディを設定しました。`);
-            } else if (obj.key === 'player_borntest') {
-                // プレイヤーキャラクター
-                model.physicsImpostor = new PhysicsImpostor(model, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
-                model.physicsImpostor.physicsBody.angularDamping = 1.0;
-                this.player = model; 
-                console.log(`モデル「${model.name}」に動的な物理ボディを設定しました。`);
-            }
+    const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
+    
+    // ★★★ ここからが修正箇所 ★★★
+    
+    // ロードされたモデルの親ノードを取得
+    const rootNode = result.meshes[0];
+    rootNode.name = obj.name;
 
+    // JSONで定義された位置とスケールを、親ノードに適用
+    rootNode.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
+    if (obj.scale) {
+        rootNode.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.y); // YをZにコピーするミスがあったので修正
+    }
+    
+    // 親ノードのすべての子メッシュをループ処理
+    rootNode.getChildMeshes().forEach(childMesh => {
+        // ★ 実際にジオメトリを持つ「子メッシュ」に対して物理ボディを設定する
+        if (obj.key === 'ground_basic') {
+            childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5 }, this.bjs_scene);
+            console.log(`メッシュ「${childMesh.name}」に静的な物理ボディを設定しました。`);
+        } else if (obj.key === 'player_borntest') {
+            // ★ プレイヤーの当たり判定も、子メッシュに設定
+            childMesh.physicsImpostor = new PhysicsImpostor(childMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
+            
+            // ★ 親ノードをプレイヤーとして保持する
+            this.player = rootNode; 
+            
+            // ★ 物理ボディを持つのは子メッシュだが、回転禁止などは子メッシュに設定
+            childMesh.physicsImpostor.physicsBody.angularDamping = 1.0;
+            
+            console.log(`メッシュ「${childMesh.name}」に動的な物理ボディを設定しました。`);
+        }
+    });
             if (result.animationGroups.length > 0) {
                 result.animationGroups[0].play(true);
             }
@@ -145,40 +157,37 @@ async create() {
 
     // ★★★ メソッドを新規追加 ★★★
     playerJump() {
-        if (!this.player || !this.player.physicsImpostor) return;
-        const velocity = this.player.physicsImpostor.getLinearVelocity();
-        // 地面にいるかの判定 (Y方向の速度がごくわずか)
-        if (Math.abs(velocity.y) < 0.1) {
-            this.player.physicsImpostor.applyImpulse(
-                new BABYLON.Vector3(0, 15, 0), // ジャンプ力
-                this.player.getAbsolutePosition()
-            );
-        }
+    if (!this.player) return;
+    const playerBody = this.player.getChildMeshes()[0].physicsImpostor; // ★ 子メッシュのImpostorを取得
+    if (!playerBody) return;
+
+    const velocity = playerBody.getLinearVelocity();
+    if (Math.abs(velocity.y) < 0.1) {
+        playerBody.applyImpulse(new BABYLON.Vector3(0, 15, 0), this.player.getAbsolutePosition());
+    }
+}
+
+update(time, delta) {
+    if (!this.player) return;
+    const playerBody = this.player.getChildMeshes()[0].physicsImpostor; // ★ 子メッシュのImpostorを取得
+    if (!playerBody) return;
+
+    const speed = 5;
+    const velocity = playerBody.getLinearVelocity();
+    const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
+
+    if (this.cursors.left.isDown) {
+        newVelocity.x = -speed;
+        this.player.rotation.y = Math.PI;
+    } else if (this.cursors.right.isDown) {
+        newVelocity.x = speed;
+        this.player.rotation.y = 0;
+    } else {
+        newVelocity.x = 0;
     }
     
-    // ★★★ メソッドを新規追加 ★★★
-    update(time, delta) {
-        if (!this.player || !this.player.physicsImpostor) return;
-
-        const speed = 5;
-        const velocity = this.player.physicsImpostor.getLinearVelocity();
-        // Y方向の速度は物理エンジンに任せ、X/Z方向の速度を制御
-        const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
-
-        if (this.cursors.left.isDown) {
-            newVelocity.x = -speed;
-            this.player.rotation.y = Math.PI; // 左向き
-        } else if (this.cursors.right.isDown) {
-            newVelocity.x = speed;
-            this.player.rotation.y = 0; // 右向き
-        } else {
-            // X方向の速度をゼロにする（ピタッと止まる）
-            newVelocity.x = 0;
-        }
-
-        this.player.physicsImpostor.setLinearVelocity(newVelocity);
-    }
-   
+    playerBody.setLinearVelocity(newVelocity);
+}
    
     shutdown() {
         console.log("VoxelScene: shutdown");
