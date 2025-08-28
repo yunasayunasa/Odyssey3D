@@ -6,7 +6,12 @@ export default class StateManager extends Phaser.Events.EventEmitter {
         this.f = {};
         this.sf = this.loadSystemVariables(); 
         if (!this.sf.history) this.sf.history = [];
+          const urlParams = new URLSearchParams(window.location.search);
+    this.sf.debug_mode = urlParams.get('debug') === 'true';
+    if (this.sf.debug_mode) {
+        console.warn("--- DEBUG MODE ON ---");
     }
+}
       // --- f (ゲーム変数) の管理 ---
 
     /**
