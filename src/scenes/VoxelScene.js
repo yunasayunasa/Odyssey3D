@@ -34,13 +34,7 @@ export default class VoxelScene extends Phaser.Scene {
         console.log("VoxelScene: create - 3Dシーンの構築を開始します。");
         await this.waitForBabylon();
 
-        // --- Babylon.jsクラスのショートカット定義 ---
-        const Scene = BABYLON.Scene, Engine = BABYLON.Engine, SceneLoader = BABYLON.SceneLoader;
-        const ArcRotateCamera = BABYLON.ArcRotateCamera, Vector3 = BABYLON.Vector3;
-        const HemisphericLight = BABYLON.HemisphericLight, Color4 = BABYLON.Color4;
-        const CannonJSPlugin = BABYLON.CannonJSPlugin, PhysicsImpostor = BABYLON.PhysicsImpostor;
-        const Quaternion = BABYLON.Quaternion, Scalar = BABYLON.Scalar, Ray = BABYLON.Ray;
-
+       
         // --- レイヤー管理 ---
         const phaserContainer = document.getElementById('phaser-container');
         const bjsCanvasNode = document.getElementById('babylon-canvas');
