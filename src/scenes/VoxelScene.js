@@ -101,6 +101,27 @@ export default class VoxelScene extends Phaser.Scene {
                 mainMesh.physicsImpostor = new PhysicsImpostor(mainMesh, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5 }, this.bjs_scene);
                 this.player = mainMesh; 
                 this.player.physicsImpostor.physicsBody.angularDamping = 1.0;
+                  // ★★★ ここからが修正箇所 ★★★
+    // 1. アニメーションをすべて停止させてから、名前で管理する
+    if (result.animationGroups.length > 0) {
+        // まずすべてのアニメーションを一旦停止
+        result.animationGroups.forEach(ag => ag.stop());
+
+        // 名前でアニメーショングループをマッピング
+        // (MagicaVoxelやBlenderで付けたアニメーション名がキーになる)
+        for (const ag of result.animationGroups) {
+            this.animations[ag.name] = ag;
+            console.log(`アニメーション「${ag.name}」を登録しました。`);
+        }
+
+        // 2. 初期状態として「待機(idle)」モーションを再生
+        if (this.animations['idle']) {
+            this.animations['idle'].play(true);
+        } else if (this.animations['tpose']) { // idleがなければtposeなど
+            this.animations['tpose'].play(true);
+        }
+    }
+    // ★★★ ここまでが修正箇所 ★★★
             }
             
             // 4. アニメーションを独立メッシュに紐付け直し
@@ -163,32 +184,7 @@ export default class VoxelScene extends Phaser.Scene {
   playerJump() {
     if (!this.player || !this.player.physicsImpostor) return;
 
-    // --- レイキャストによる接地判定 ---
-    
-    // 1. キャラクターのバウンディングボックス（境界箱）を取得
-    const boundingBox = this.player.getBoundingInfo().boundingBox;
-    
-    // 2. キャラクターの足元（中心点から、高さの半分だけ下）の座標を計算
-    const rayOrigin = this.player.getAbsolutePosition().clone(); // 必ずclone()して元の座標を壊さない
-    rayOrigin.y -= boundingBox.extendSize.y;
-
-    // 3. 足元から、ごくわずか（0.3ユニット分）下に向けてレイを飛ばす
-    const ray = new BABYLON.Ray(rayOrigin, new BABYLON.Vector3(0, -1, 0), 0.3);
-
-    // デバッグ用にレイを可視化する（開発中だけ有効にすると便利）
-    // const rayHelper = new BABYLON.RayHelper(ray);
-    // rayHelper.show(this.bjs_scene);
-
-    // 4. "ground"という名前のメッシュとだけ衝突判定
-    const hit = this.bjs_scene.pickWithRay(ray, (mesh) => {
-        return mesh.name === "ground";
-    });
-
-    // 5. レイが地面に当たった場合のみジャンプを許可
-    if (hit.hit) {
-        // ジャンプする前に、物理ボディが眠っている（スリープ状態）かもしれないので叩き起こす
-        this.player.physicsImpostor.wakeUp();
-        
+    if (this.isPlayerOnGround()) { // 新しいメソッドで判定
         this.player.physicsImpostor.applyImpulse(
             new BABYLON.Vector3(0, 15, 0),
             this.player.getAbsolutePosition()
@@ -211,6 +207,35 @@ update(time, delta) {
     if (this.cursors.right.isDown) moveDirection.addInPlace(cameraRight);
     if (this.cursors.up.isDown)    moveDirection.addInPlace(cameraForward);
     if (this.cursors.down.isDown)  moveDirection.addInPlace(cameraForward.scale(-1));
+ let currentAnim = null; // これから再生すべきアニメーション
+
+    // 1. 接地判定 (ジャンプ中かどうかを判断)
+    const isOnGround = this.isPlayerOnGround();
+
+    // 2. 状態を判定して、再生すべきアニメーションを決める
+    if (!isOnGround) {
+        currentAnim = this.animations['jump'];
+    } else if (moveDirection.length() > 0.1) {
+        currentAnim = this.animations['run'];
+    } else {
+        currentAnim = this.animations['idle'];
+    }
+    
+    // 3. 現在再生中のアニメーションと違えば、切り替える
+    if (currentAnim && !currentAnim.isPlaying) {
+        // 他のアニメーションをすべて停止
+        for (const name in this.animations) {
+            if (this.animations[name].isPlaying) {
+                this.animations[name].stop();
+            }
+        }
+        // 新しいアニメーションを再生
+        currentAnim.play(true);
+    }
+
+    // ★★★ ここまでがアニメーション切り替えロ-ジック ★★★
+
+
 
     // Y方向の速度は物理エンジンに任せる
     const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
@@ -249,6 +274,17 @@ update(time, delta) {
 
     // ★ 物理ボディの回転は、常に「見た目」の回転と同期させる
     this.player.physicsImpostor.setAngularVelocity(BABYLON.Vector3.Zero()); // まず回転速度をリセット
+}
+
+// ★★★ 接地判定ロジックを、独立したメソッドに切り出す ★★★
+isPlayerOnGround() {
+    if (!this.player) return false;
+
+    const origin = this.player.position;
+    const ray = new BABYLON.Ray(origin, new BABYLON.Vector3(0, -1, 0), this.player.getBoundingInfo().boundingBox.extendSize.y + 0.1);
+    const hit = this.bjs_scene.pickWithRay(ray, (mesh) => mesh.name === "ground");
+    
+    return hit.hit;
 }
    
     shutdown() {
