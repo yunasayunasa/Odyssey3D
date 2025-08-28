@@ -26,6 +26,8 @@ export default class VoxelScene extends Phaser.Scene {
 
 // VoxelScene.js -> create()メソッド (最終・完全版)
 
+// VoxelScene.js -> create()メソッド (最終・確定・安定版)
+
 async create() {
     console.log("VoxelScene: create - 3Dシーンの構築を開始します。");
     await this.waitForBabylon();
@@ -62,46 +64,52 @@ async create() {
 
     console.log(`VoxelScene: ステージ「${stageData.name}」のモデルをロードします...`);
     
-    // VoxelScene.js -> create()メソッドのforループ内
-
-for (const obj of stageData.objects) {
-    try {
-        const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
-        const rootNode = result.meshes[0]; // 親ノード
-        const childMeshes = rootNode.getChildMeshes();
-        
-        rootNode.name = obj.name;
-        rootNode.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
-        if (obj.scale) {
-            rootNode.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
+    // ★★★ ここからが修正されたループ ★★★
+    for (const obj of stageData.objects) {
+        // ★ modelKeyとmodelPathの定義をループの内側に戻す
+        const modelKey = obj.key;
+        const modelPath = assetDefine.models[modelKey];
+        if (!modelPath) {
+            console.warn(`モデルキー[${modelKey}]が見つかりません。`);
+            continue;
         }
-
-        // ★★★ 物理ボディは親ノードに設定 ★★★
-        if (childMeshes.length > 0) {
-            // 子メッシュのバウンディングボックスから、正しいコライダーのサイズを計算
-            const boundingBox = childMeshes[0].getBoundingInfo().boundingBox;
-            const size = boundingBox.maximumWorld.subtract(boundingBox.minimumWorld);
-            const impostorShape = PhysicsImpostor.BoxImpostor;
-            const impostorParams = { 
-                mass: (obj.key === 'player_borntest') ? 1 : 0, 
-                friction: 0.5
-            };
+        
+        try {
+            const result = await SceneLoader.ImportMeshAsync(null, modelPath.rootUrl, modelPath.fileName, this.bjs_scene);
+            const rootNode = result.meshes[0];
+            const childMeshes = rootNode.getChildMeshes();
             
-            // ★ 親ノードに、子メッシュの大きさに合わせたコライダーを設定
-            rootNode.physicsImpostor = new PhysicsImpostor(rootNode, impostorShape, impostorParams, this.bjs_scene);
-
-            if (obj.key === 'player_borntest') {
-                this.player = rootNode;
-                rootNode.physicsImpostor.physicsBody.angularDamping = 1.0;
+            rootNode.name = obj.name;
+            rootNode.position = new Vector3(obj.position.x, obj.position.y, obj.position.z);
+            if (obj.scale) {
+                rootNode.scaling = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);
             }
-        }
-        
-        if (result.animationGroups.length > 0) result.animationGroups[0].play(true);
 
-    } catch (error) {
-        console.error(`モデル[${modelKey}]のロードまたは設定中にエラーが発生しました。`, error);
+            if (childMeshes.length > 0) {
+                const mainMesh = childMeshes[0]; // 代表となる子メッシュ
+                
+                const impostorParams = { 
+                    mass: (obj.key === 'player_borntest') ? 1 : 0, 
+                    friction: 0.5,
+                    restitution: 0.0
+                };
+                
+                // ★ 親ノードに、子メッシュと同じ大きさのコライダーを設定
+                //    これにより、Babylon.jsの警告を回避しつつ、正しい大きさの当たり判定を持つ
+                rootNode.physicsImpostor = new PhysicsImpostor(mainMesh, PhysicsImpostor.BoxImpostor, impostorParams, this.bjs_scene);
+
+                if (obj.key === 'player_borntest') {
+                    this.player = rootNode;
+                    rootNode.physicsImpostor.physicsBody.angularDamping = 1.0;
+                }
+            }
+            
+            if (result.animationGroups.length > 0) result.animationGroups[0].play(true);
+
+        } catch (error) {
+            console.error(`モデル[${modelKey}]のロードまたは設定中にエラーが発生しました。`, error);
+        }
     }
-}
 
     // --- 入力設定 ---
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -119,7 +127,6 @@ for (const obj of stageData.objects) {
         this.scene.get('SystemScene').events.emit('return-to-novel', { from: 'VoxelScene' });
     });
 }
-
     waitForBabylon() {
         return new Promise(resolve => {
             const check = () => {
@@ -140,24 +147,22 @@ for (const obj of stageData.objects) {
     }
 
     // ★★★ メソッドを新規追加 ★★★
-    playerJump() {
-    if (!this.player) return;
-    const playerBody = this.player.getChildMeshes()[0].physicsImpostor; // ★ 子メッシュのImpostorを取得
-    if (!playerBody) return;
-
-    const velocity = playerBody.getLinearVelocity();
+    // update と playerJump (最終版)
+playerJump() {
+    if (!this.player || !this.player.physicsImpostor) return;
+    const velocity = this.player.physicsImpostor.getLinearVelocity();
     if (Math.abs(velocity.y) < 0.1) {
-        playerBody.applyImpulse(new BABYLON.Vector3(0, 15, 0), this.player.getAbsolutePosition());
+        this.player.physicsImpostor.applyImpulse(
+            new BABYLON.Vector3(0, 15, 0),
+            this.player.getAbsolutePosition()
+        );
     }
 }
 
 update(time, delta) {
-    if (!this.player) return;
-    const playerBody = this.player.getChildMeshes()[0].physicsImpostor; // ★ 子メッシュのImpostorを取得
-    if (!playerBody) return;
-
+    if (!this.player || !this.player.physicsImpostor) return;
     const speed = 5;
-    const velocity = playerBody.getLinearVelocity();
+    const velocity = this.player.physicsImpostor.getLinearVelocity();
     const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
 
     if (this.cursors.left.isDown) {
@@ -170,7 +175,7 @@ update(time, delta) {
         newVelocity.x = 0;
     }
     
-    playerBody.setLinearVelocity(newVelocity);
+    this.player.physicsImpostor.setLinearVelocity(newVelocity);
 }
    
     shutdown() {
