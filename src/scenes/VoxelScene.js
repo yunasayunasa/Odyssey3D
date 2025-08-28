@@ -1,5 +1,12 @@
 // src/scenes/VoxelScene.js (最終・クリーンアップ版)
-
+// ★★★ ここで、ファイル全体で使うクラスを一度だけ定義する ★★★
+const BABYLON = window.BABYLON;
+const CANNON = window.CANNON;
+const Scene = BABYLON.Scene, Engine = BABYLON.Engine, SceneLoader = BABYLON.SceneLoader;
+const ArcRotateCamera = BABYLON.ArcRotateCamera, Vector3 = BABYLON.Vector3;
+const HemisphericLight = BABYLON.HemisphericLight, Color4 = BABYLON.Color4;
+const CannonJSPlugin = BABYLON.CannonJSPlugin, PhysicsImpostor = BABYLON.PhysicsImpostor;
+const Quaternion = BABYLON.Quaternion, Scalar = BABYLON.Scalar, Ray = BABYLON.Ray;
 // Babylon.jsのクラスをグローバルから取得
 const BABYLON = window.BABYLON;
 const CANNON = window.CANNON;
