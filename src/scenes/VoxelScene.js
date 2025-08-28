@@ -21,6 +21,9 @@ export default class VoxelScene extends Phaser.Scene {
         this.player = null;
         this.cursors = null;
         this.animations = {}; 
+        this.stateManager = null;
+        this.selectedMesh = null; // 現在選択中のメッシュ
+        this.editMode = 'translate'; // 'translate', 'rotate', 'scale'
     }
     
     init(data) {
@@ -30,6 +33,7 @@ export default class VoxelScene extends Phaser.Scene {
     }
 
     async create() {
+        this.stateManager = this.sys.registry.get('stateManager');
         console.log("VoxelScene: create - 3Dシーンの構築を開始します。");
         await this.waitForBabylon();
 
@@ -133,7 +137,9 @@ export default class VoxelScene extends Phaser.Scene {
         this.bjs_engine.runRenderLoop(() => {
             if (this.bjs_scene) this.bjs_scene.render();
         });
-
+if (this.stateManager.sf.debug_mode) {
+            this.initEditorControls();
+        }
         // --- Odyssey Engineとの契約遵守 ---
         this.scale.on('resize', this.resize, this);
         this.events.emit('scene-ready');
@@ -179,45 +185,109 @@ export default class VoxelScene extends Phaser.Scene {
         }
     }
     
-    update(time, delta) {
-        if (!this.player || !this.player.physicsImpostor) return;
+    // VoxelScene.js -> update()メソッド
+
+update(time, delta) {
+    // --- 【最優先】エンジンやシーンが存在しない場合は、即座に処理を中断 ---
+    if (!this.bjs_engine || !this.bjs_scene) return;
+
+
+    // --- 【モード分岐】デバッグモードか、通常のプレイモードかを判定 ---
+
+    if (this.stateManager && this.stateManager.sf.debug_mode) {
         
+        // --- ★★★ 1. インゲーム・エディタモードの処理 ★★★ ---
+        
+        // 選択中のメッシュがなければ、何もしない
+        if (!this.selectedMesh) return;
+
+        // 操作の速度を定義
+        const moveSpeed = 0.1;   // 位置
+        const rotateSpeed = 0.05; // 回転
+        const scaleSpeed = 0.01;  // 拡縮
+
+        // 現在の編集モードに応じて、キーボード入力でプロパティを変更
+        switch (this.editMode) {
+            case 'translate': // --- 移動モード (Tキー) ---
+                if (this.cursors.left.isDown)  this.selectedMesh.position.x -= moveSpeed;
+                if (this.cursors.right.isDown) this.selectedMesh.position.x += moveSpeed;
+                if (this.cursors.up.isDown)    this.selectedMesh.position.z += moveSpeed; // 3D空間の奥へ
+                if (this.cursors.down.isDown)  this.selectedMesh.position.z -= moveSpeed; // 3D空間の手前へ
+                // (Shift + 上下でY座標を操作)
+                if (this.input.keyboard.addKey('SHIFT').isDown) {
+                    if (this.cursors.up.isDown)   this.selectedMesh.position.y += moveSpeed;
+                    if (this.cursors.down.isDown) this.selectedMesh.position.y -= moveSpeed;
+                }
+                break;
+
+            case 'rotate': // --- 回転モード (Rキー) ---
+                if (this.cursors.left.isDown)  this.selectedMesh.rotation.y += rotateSpeed; // Y軸周りに回転
+                if (this.cursors.right.isDown) this.selectedMesh.rotation.y -= rotateSpeed;
+                if (this.cursors.up.isDown)    this.selectedMesh.rotation.x += rotateSpeed; // X軸周りに回転
+                if (this.cursors.down.isDown)  this.selectedMesh.rotation.x -= rotateSpeed;
+                break;
+
+            case 'scale': // --- 拡縮モード (Sキー) ---
+                if (this.cursors.up.isDown) {
+                    this.selectedMesh.scaling.addInPlace(new BABYLON.Vector3(scaleSpeed, scaleSpeed, scaleSpeed));
+                }
+                if (this.cursors.down.isDown) {
+                    this.selectedMesh.scaling.subtractInPlace(new BABYLON.Vector3(scaleSpeed, scaleSpeed, scaleSpeed));
+                }
+                break;
+        }
+
+    } else {
+
+        // --- ★★★ 2. 通常のプレイモードの処理 ★★★ ---
+
+        // プレイヤーオブジェクトが存在し、物理ボディも有効な場合のみ実行
+        if (!this.player || !this.player.physicsImpostor) return;
+
         const speed = 5;
         const velocity = this.player.physicsImpostor.getLinearVelocity();
         const camera = this.bjs_scene.activeCamera;
-        
+
+        // カメラの向きを基準とした、水平な移動ベクトルを計算
         const cameraForward = camera.getForwardRay(1).direction;
-        const cameraRight = BABYLON.Vector3.Cross(Vector3.Up(), cameraForward).normalize();
+        const cameraRight = BABYLON.Vector3.Cross(BABYLON.Vector3.Up(), cameraForward).normalize();
         cameraForward.y = 0;
         cameraRight.y = 0;
 
-        let moveDirection = Vector3.Zero();
+        let moveDirection = BABYLON.Vector3.Zero();
         if (this.cursors.left.isDown)  moveDirection.addInPlace(cameraRight.scale(-1));
         if (this.cursors.right.isDown) moveDirection.addInPlace(cameraRight);
         if (this.cursors.up.isDown)    moveDirection.addInPlace(cameraForward);
         if (this.cursors.down.isDown)  moveDirection.addInPlace(cameraForward.scale(-1));
 
+        // Y方向の速度は物理エンジンに任せる
+        const newVelocity = new BABYLON.Vector3(0, velocity.y, 0);
         let currentAnimName = 'idle';
-        const newVelocity = new Vector3(0, velocity.y, 0);
 
         if (moveDirection.length() > 0.1) {
+            // --- 移動中の処理 ---
             currentAnimName = this.isGrounded() ? 'run' : 'jump';
             moveDirection.normalize();
+            
+            // 移動速度の計算
             const finalMove = moveDirection.scale(speed);
             newVelocity.x = finalMove.x;
             newVelocity.z = finalMove.z;
 
+            // 移動方向への自動的な方向転換
             const targetRotation = Math.atan2(moveDirection.x, moveDirection.z);
-            const currentRotation = this.player.rotation.y;
-            this.player.rotation.y = Scalar.Lerp(currentRotation, targetRotation, 0.2);
-            
+            // 見た目の回転(rotation.y)を滑らかに変化させる
+            this.player.rotation.y = BABYLON.Scalar.Lerp(this.player.rotation.y, targetRotation, 0.2);
+
         } else {
+            // --- 静止中の処理 ---
             currentAnimName = this.isGrounded() ? 'idle' : 'jump';
             newVelocity.x = 0;
             newVelocity.z = 0;
         }
 
-        const animToPlay = this.animations[currentAnimName] || this.animations['T-pose']; // fallback
+        // アニメーションの切り替え
+        const animToPlay = this.animations[currentAnimName] || this.animations['T-pose'];
         if (animToPlay && !animToPlay.isPlaying) {
             for (const name in this.animations) {
                 if (this.animations[name].isPlaying) {
@@ -227,9 +297,66 @@ export default class VoxelScene extends Phaser.Scene {
             animToPlay.play(true);
         }
         
+        // 最終的な速度を物理ボディに設定
         this.player.physicsImpostor.setLinearVelocity(newVelocity);
     }
+}
    
+  // ★★★ エディタの初期化メソッドを新規作成 ★★★
+    initEditorControls() {
+        console.log("VoxelScene: Initializing In-Game Editor...");
+
+        // マウスクリックでオブジェクトを選択する
+        this.input.on('pointerdown', (pointer) => {
+            const pickResult = this.bjs_scene.pick(pointer.x, pointer.y);
+            if (pickResult.hit) {
+                this.selectedMesh = pickResult.pickedMesh;
+                console.log(`[Editor] Selected: ${this.selectedMesh.name}`);
+                // (ここに、選択したオブジェクトをハイライトする処理などを追加すると、よりリッチになる)
+            } else {
+                this.selectedMesh = null;
+                console.log("[Editor] Deselected.");
+            }
+        });
+
+        // キーボードで編集モードを切り替え (T: 移動, R: 回転, S: 拡縮)
+        this.input.keyboard.on('keydown-T', () => { this.editMode = 'translate'; console.log("Edit Mode: Translate"); });
+        this.input.keyboard.on('keydown-R', () => { this.editMode = 'rotate'; console.log("Edit Mode: Rotate"); });
+        this.input.keyboard.on('keydown-S', () => { this.editMode = 'scale'; console.log("Edit Mode: Scale"); });
+
+        // 「保存」キー (Pキーなど) で、現在のシーン情報をJSONとしてコンソールに出力
+        this.input.keyboard.on('keydown-P', this.exportSceneToJson, this);
+    }
+
+    // ★★★ シーン情報をJSONで出力するメソッドを新規作成 ★★★
+    exportSceneToJson() {
+        if (!this.bjs_scene) return;
+        console.log("%c--- SCENE DATA EXPORT ---", "color: lightgreen; font-weight: bold;");
+        
+        const exportData = {
+            objects: []
+        };
+
+        // シーン内のすべてのメッシュを走査
+        this.bjs_scene.meshes.forEach(mesh => {
+            // asset_define.jsonの形式に合わせてデータを構築
+            // (名前から元のキーを取得するなど、工夫が必要)
+            if (mesh.name && mesh.name !== 'ground' && mesh.name !== 'player') return; // 例：特定の名前だけ
+
+            exportData.objects.push({
+                key: mesh.name === 'ground' ? 'ground_basic' : 'player_borntest', // 仮
+                name: mesh.name,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
+                scale: { x: mesh.scaling.x, y: mesh.scaling.y, z: mesh.scaling.z }
+            });
+        });
+
+        // JSON文字列に変換してコンソールに出力 (インデント付きで見やすく)
+        console.log(JSON.stringify(exportData, null, 2));
+        console.log("%c--- EXPORT COMPLETE ---", "color: lightgreen; font-weight: bold;");
+    }
+
     shutdown() {
         // ... (以前の、クリーンなshutdownメソッド)
     }
