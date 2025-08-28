@@ -14,6 +14,7 @@ export default class VoxelScene extends Phaser.Scene {
         this.stageKey = 'stage_01_tutorial'; // デフォルトステージキー
         this.player = null;
         this.cursors = null;
+         this.animations = {}; // アニメーション管理用オブジェクトを初期化
     }
     
     init(data) {
