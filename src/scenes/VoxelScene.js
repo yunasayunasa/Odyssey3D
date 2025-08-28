@@ -87,7 +87,7 @@ export default class VoxelScene extends Phaser.Scene {
                 if (obj.key === 'ground_basic') {
                     model.physicsImpostor = new PhysicsImpostor(model, PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5, restitution: 0.1 }, this.bjs_scene);
                 } else if (obj.key === 'player_borntest') {
-                    model.physicsImpostor = new PhysicsImpostor(model, PhysicsImpostor.CapsuleImpostor, { mass: 1, friction: 0.5, restitution: 0.0 }, this.bjs_scene);
+                    model.physicsImpostor = new PhysicsImpostor(model, PhysicsImpostor.BoxImpostor, { mass: 1, friction: 0.5, restitution: 0.0 }, this.bjs_scene);
                     model.physicsImpostor.physicsBody.angularDamping = 1.0;
                     this.player = model; 
                 }
