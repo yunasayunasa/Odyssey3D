@@ -36,35 +36,27 @@ export default class SystemScene extends Phaser.Scene {
 
           // 1. StateManagerから起動パラメータを取得
         const stateManager = this.sys.registry.get('stateManager');
-        const bootParams = stateManager.sf.boot_params || {};
+    const bootParams = stateManager.sf.boot_params || {};
+    const targetSceneKey = bootParams.edit_scene || bootParams.debug_scene;
 
-        // 2. "edit_scene" (または "debug_scene") パラメータがあるかチェック
-        const targetSceneKey = bootParams.edit_scene || bootParams.debug_scene;
+    // --- 起動モードを完全に分岐させる ---
 
-        if (targetSceneKey) {
-            // --- エディタ/デバッグ起動モード ---
-            console.warn(`[SystemScene] デバッグ起動モードを検出。シーン[${targetSceneKey}]を直接起動します。`);
-            
-            // 起動パラメータから、シーンに渡すためのデータオブジェクトを作成
-            // (debug, edit_sceneといった予約語は除外する)
-            const sceneData = { ...bootParams };
-            delete sceneData.debug;
-            delete sceneData.edit_scene;
-            delete sceneData.debug_scene;
+    if (targetSceneKey) {
+        // --- 1. エディタ/デバッグ起動モード ---
+        console.warn(`[SystemScene] デバッグ起動モードを検出。シーン[${targetSceneKey}]を直接起動します。`);
+        
+        const sceneData = { ...bootParams };
+        delete sceneData.debug;
+        delete sceneData.edit_scene;
+        delete sceneData.debug_scene;
 
-            // UISceneは常に起動しておくのが安全
-            this.scene.launch('UIScene');
-            
-            // 指定されたシーンを、指定されたデータで直接起動
-            this._startAndMonitorScene(targetSceneKey, sceneData);
+        this.scene.launch('UIScene');
+        this._startAndMonitorScene(targetSceneKey, sceneData);
 
-        } else {
-            // --- 通常のゲーム起動モード ---
-            // PreloadSceneから渡されたデータで初期ゲームを起動
-            if (this.initialGameData) {
-                this._startInitialGame(this.initialGameData);
-            }
-        }
+    } else if (this.initialGameData) {
+        // --- 2. 通常のゲーム起動モード ---
+        // ★ "else if" にすることで、デバッグ起動モードの時は絶対に実行されなくなる
+        this._startInitialGame(this.initialGameData);
     }
 
     /**
