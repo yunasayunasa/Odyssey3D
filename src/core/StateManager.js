@@ -2,14 +2,32 @@
 
 export default class StateManager extends Phaser.Events.EventEmitter {
     constructor() {
-        super(); // ★★★ 追加: 親クラスのコンストラクタを呼び出す ★★★
+        super(); 
         this.f = {};
         this.sf = this.loadSystemVariables(); 
+
         if (!this.sf.history) this.sf.history = [];
-          const urlParams = new URLSearchParams(window.location.search);
-    this.sf.debug_mode = urlParams.get('debug') === 'true';
-    if (this.sf.debug_mode) {
-        console.warn("--- DEBUG MODE ON ---");
+
+        
+        // 1. 現在のページのURLからクエリパラメータを取得
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // 2. パラメータを単純なオブジェクトに変換
+        const bootParams = {};
+        for (const [key, value] of urlParams.entries()) {
+            bootParams[key] = value;
+        }
+
+        // 3. システム変数(sf)に、起動パラメータを保存
+        this.sf.boot_params = bootParams;
+
+        // 4. デバッグモードかどうかを判定し、分かりやすくフラグを立てる
+        this.sf.debug_mode = (this.sf.boot_params.debug === 'true');
+        
+        if (this.sf.debug_mode) {
+            console.warn("--- DEBUG MODE ON ---", this.sf.boot_params);
+        }
+
     }
 }
       // --- f (ゲーム変数) の管理 ---
