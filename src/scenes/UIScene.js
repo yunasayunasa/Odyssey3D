@@ -6,18 +6,27 @@ export default class UIScene  extends EditableScene {
     
     constructor() {
         super({ key: 'UIScene', active: false });
+       
         this.menuButton = null;
         this.panel = null;
         this.isPanelOpen = false;
-        
-        // 管理するHUDをプロパティとして初期化
         this.coinHud = null;
         this.playerHpBar = null;
         this.enemyHpBar = null; // バトルシーン用に敵HPバーも管理
     }
 
-    create() {
-         super.create();
+     /**
+     * EditableSceneから呼び出される、このシーン独自のinit処理
+     */
+    handleInit(data) {
+        // このシーンはシナリオから直接データを受け取ることはないので、通常は空
+        console.log("UIScene: handleInit");
+    }
+
+      /**
+     * EditableSceneから呼び出される、このシーン独自のcreate処理
+     */
+    handleCreate() {
         console.log("UIScene: 作成・初期化");
         this.scene.bringToTop();
         
@@ -96,6 +105,7 @@ export default class UIScene  extends EditableScene {
         this.enemyHpBar = new HpBar(this, { x: this.scale.width - 100 - 250, y: 100, width: 250, height: 25, type: 'enemy', stateManager: stateManager });
 
  // エディタモードが有効な場合、各UI要素を編集可能にする。UIを増やしたらここも増やす
+      // ★★★ エディタ機能を適用 ★★★
         if (this.isEditorMode) {
             // オブジェクトに、JSON出力時に識別するための名前を付ける
             this.menuButton.name = 'menu_button';
@@ -109,7 +119,6 @@ export default class UIScene  extends EditableScene {
             this.makeEditable(this.playerHpBar);
             this.makeEditable(this.enemyHpBar);
         }
-
 
 
         // --- SystemSceneからの通知を受け取るリスナー ---
@@ -184,5 +193,6 @@ export default class UIScene  extends EditableScene {
         if (systemScene) {
             systemScene.events.off('transition-complete', this.onSceneTransition, this);
         }
+        super.shutdown(); // 親クラス(EditableScene)のshutdownを呼び出す
     }
 }

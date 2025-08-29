@@ -29,7 +29,10 @@ export default class GameScene  extends EditableScene {
         this.isSceneFullyReady = false; // シーンが完全に準備完了したかのフラグ
     }
 
-    init(data) {
+     /**
+     * EditableSceneから呼び出される、このシーン独自のinit処理
+     */
+    handleInit(data) {
         this.charaDefs = data.charaDefs;
         this.startScenario = data.startScenario || 'test.ks';
         this.startLabel = data.startLabel || null;
@@ -53,8 +56,7 @@ export default class GameScene  extends EditableScene {
 
    // src/scenes/GameScene.js の create() メソッドの正しい形
 
-        async create() { 
-            super.create();
+        async handleCreate() {
             console.log("GameScene: クリエイト処理を開始します。");
         this.cameras.main.setBackgroundColor('#000000');
         
