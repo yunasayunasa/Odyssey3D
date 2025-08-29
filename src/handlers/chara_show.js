@@ -61,7 +61,9 @@ export function handleCharaShow(manager, params) {
         // ★★★ 管理リストに登録。セーブ時はこのオブジェクトが参照される ★★★
         manager.scene.characters[name] = chara;
 
-        // ★★★ StateManagerに関する処理はすべて不要なので削除 ★★★
+         if (typeof manager.scene.enableDragFor === 'function') {
+            manager.scene.enableDragFor(chara);
+        }
 
         // --- 4. アニメーション ---
         const time = Number(params.time) || 0;

@@ -53,6 +53,13 @@ export default class NovelOverlayScene extends Phaser.Scene {
         // ★★★ newするのではなく、Registryから共有インスタンスを取得 ★★★
         this.configManager = this.sys.registry.get('configManager');
         this.stateManager = this.sys.registry.get('stateManager'); 
+        // 2. デバッグモードかどうかを判定
+        this.isEditorMode = this.stateManager.sf.debug_mode;
+        
+        if (this.isEditorMode) {
+            console.warn("[GameScene] エディタモードで起動しました。");
+            this.initEditorControls();
+        }
         this.soundManager = this.sys.registry.get('soundManager');
 
         // --- 2. レイヤーとUIを生成 ---
@@ -131,6 +138,49 @@ export default class NovelOverlayScene extends Phaser.Scene {
             this.scenarioManager.isWaitingChoice = false;
         }
     }
+
+     // ★★★ エディタ初期化メソッドを新規作成 ★★★
+    initEditorControls() {
+        // --- ドラッグ＆ドロップ機能 ---
+        this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
+            // オブジェクトをドラッグした座標に追従させる
+            gameObject.x = dragX;
+            gameObject.y = dragY;
+
+            // (オプション) ドラッグ中の座標をコンソールに出力
+            // console.log(`[Editor] Dragging ${gameObject.name}: x=${dragX.toFixed(0)}, y=${dragY.toFixed(0)}`);
+        });
+
+        // --- オブジェクトの選択とプロパティ表示 (フェーズ2の内容) ---
+        // (今はまだ実装しない)
+
+        // --- JSON出力機能 (フェーズ3の内容) ---
+        // (今はまだ実装しない)
+    }
+
+    // ★★★ 新しいオブジェクトが追加された時に、ドラッグ可能にする処理 ★★★
+    // [chara_show]などのタグハンドラがキャラクター画像を追加した後、
+    // このメソッドを呼び出すように、ハンドラを改造する必要があります。
+    enableDragFor(gameObject) {
+        // エディタモードでない場合は、何もしない
+        if (!this.isEditorMode) return;
+
+        // オブジェクトに名前がない場合は、識別用に名前を付ける
+        if (!gameObject.name) {
+            gameObject.name = `editable_${this.children.list.length}`;
+        }
+        
+        // オブジェクトをドラッグ可能にする
+        this.input.setDraggable(gameObject, true);
+
+        // (オプション) ドラッグ可能なオブジェクトを分かりやすくするために、枠線を表示する
+        gameObject.setInteractive(); // setDraggableの前でも後でもOK
+        gameObject.on('pointerover', () => { gameObject.setTint(0x00ff00); });
+        gameObject.on('pointerout', () => { gameObject.clearTint(); });
+
+        console.log(`[Editor] Object "${gameObject.name}" is now draggable.`);
+    }
+}
 
    // ★★★ 安定性のためのshutdownメソッドを実装 ★★★
     shutdown() {
