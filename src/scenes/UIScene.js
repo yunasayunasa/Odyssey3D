@@ -1,7 +1,8 @@
 import CoinHud from '../ui/CoinHud.js';
 import HpBar from '../ui/HpBar.js';
+import EditableScene from './EditableScene.js'; // ★ 親クラスをインポート
 
-export default class UIScene extends Phaser.Scene {
+export default class UIScene  extends EditableScene {
     
     constructor() {
         super({ key: 'UIScene', active: false });
@@ -16,6 +17,7 @@ export default class UIScene extends Phaser.Scene {
     }
 
     create() {
+         super.create();
         console.log("UIScene: 作成・初期化");
         this.scene.bringToTop();
         
@@ -92,6 +94,23 @@ export default class UIScene extends Phaser.Scene {
         this.playerHpBar = new HpBar(this, { x: 100, y: 100, width: 200, height: 25, type: 'player', stateManager: stateManager });
         // BattleSceneにしか出てこない敵HPバーもここで作ってしまう
         this.enemyHpBar = new HpBar(this, { x: this.scale.width - 100 - 250, y: 100, width: 250, height: 25, type: 'enemy', stateManager: stateManager });
+
+ // エディタモードが有効な場合、各UI要素を編集可能にする。UIを増やしたらここも増やす
+        if (this.isEditorMode) {
+            // オブジェクトに、JSON出力時に識別するための名前を付ける
+            this.menuButton.name = 'menu_button';
+            this.coinHud.name = 'coin_hud';
+            this.playerHpBar.name = 'player_hp_bar';
+            this.enemyHpBar.name = 'enemy_hp_bar';
+
+            // 共通エディタ機能（ドラッグなど）を有効化
+            this.makeEditable(this.menuButton);
+            this.makeEditable(this.coinHud);
+            this.makeEditable(this.playerHpBar);
+            this.makeEditable(this.enemyHpBar);
+        }
+
+
 
         // --- SystemSceneからの通知を受け取るリスナー ---
         const systemScene = this.scene.get('SystemScene');
