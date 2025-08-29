@@ -180,7 +180,7 @@ export default class NovelOverlayScene extends Phaser.Scene {
 
         console.log(`[Editor] Object "${gameObject.name}" is now draggable.`);
     }
-}
+
 
    // ★★★ 安定性のためのshutdownメソッドを実装 ★★★
     shutdown() {
