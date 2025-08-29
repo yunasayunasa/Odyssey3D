@@ -33,14 +33,39 @@ export default class EditableScene extends Phaser.Scene {
      * this.addやthis.inputなどのシステムが、このメソッド内で使えるようになる
      */
     create() {
-        // ★ デバッグモードなら、エディタ機能を初期化
-        // この時点では、this.input や this.add は完全に準備が整っている
-        if (this.isEditorMode) {
+      this.handleCreate();
+    }
+
+      // ★★★ updateメソッドを新設（または修正） ★★★
+    update(time, delta) {
+        // --- エディタの初回初期化 ---
+        // isEditorModeがtrueで、まだ初期化されていなければ、一度だけ実行
+        if (this.isEditorMode && !this.editorInitialized) {
             this.initEditorControls();
+            
+            // ★ シーン上のすべてのオブジェクトを編集可能にする
+            this.children.list.forEach(gameObject => {
+                // コンテナと、その中の子要素もすべて編集可能にする
+                if (gameObject.list) {
+                    gameObject.list.forEach(child => {
+                        if(child.name) this.makeEditable(child);
+                    });
+                }
+                if(gameObject.name) this.makeEditable(gameObject);
+            });
+            
+            this.editorInitialized = true;
         }
 
-        // 子シーンが独自のcreate処理を実行できるように、handleCreateを呼び出す
-        this.handleCreate();
+        // --- 子シーンのupdate処理を呼び出す ---
+        if (this.handleUpdate) {
+            this.handleUpdate(time, delta);
+        }
+    }
+
+    // ★★★ 子シーンが実装するための、空のupdateメソッドを用意 ★★★
+    handleUpdate(time, delta) {
+        // このメソッドは、子シーンでオーバーライドされることを想定しています
     }
 
     // --- ここからが、子シーンが実装するためのメソッド ---
@@ -164,6 +189,18 @@ export default class EditableScene extends Phaser.Scene {
 
         // JSON文字列に変換してコンソールに出力
         console.log(JSON.stringify(exportData, null, 2));
+    }
+
+  /**
+     * 動的に追加されたオブジェクトを、後から編集可能にする
+     */
+    addEditableObject(gameObject) {
+        if (!this.isEditorMode || !gameObject) return;
+        
+        // 既にエディタが初期化済みの場合のみ、makeEditableを呼び出す
+        if (this.editorInitialized) {
+            this.makeEditable(gameObject);
+        }
     }
 
     /**

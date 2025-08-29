@@ -104,20 +104,14 @@ export default class UIScene  extends EditableScene {
         // BattleSceneにしか出てこない敵HPバーもここで作ってしまう
         this.enemyHpBar = new HpBar(this, { x: this.scale.width - 100 - 250, y: 100, width: 250, height: 25, type: 'enemy', stateManager: stateManager });
 
- // エディタモードが有効な場合、各UI要素を編集可能にする。UIを増やしたらここも増やす
-      // ★★★ エディタ機能を適用 ★★★
-        if (this.isEditorMode) {
-            // オブジェクトに、JSON出力時に識別するための名前を付ける
-            this.menuButton.name = 'menu_button';
-            this.coinHud.name = 'coin_hud';
-            this.playerHpBar.name = 'player_hp_bar';
-            this.enemyHpBar.name = 'enemy_hp_bar';
-
-            // 共通エディタ機能（ドラッグなど）を有効化
-            this.makeEditable(this.menuButton);
-            this.makeEditable(this.coinHud);
-            this.makeEditable(this.playerHpBar);
-            this.makeEditable(this.enemyHpBar);
+ // isEditorModeのチェックと、makeEditableの呼び出しを削除する
+        // (親クラスが自動でやってくれるので、ここでは不要)
+        
+        // ただし、JSONで識別するための名前だけは、ここで付けておく
+        this.menuButton.name = 'menu_button';
+        this.coinHud.name = 'coin_hud';
+        this.playerHpBar.name = 'player_hp_bar';
+        this.enemyHpBar.name = 'enemy_hp_bar';
         }
 
 
