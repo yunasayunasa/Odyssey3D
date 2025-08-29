@@ -302,7 +302,7 @@ clearChoiceButtons() {
 
         console.log(`[Editor] Object "${gameObject.name}" is now draggable.`);
     }
-}
+
 
 
 // GameScene.js 内の performLoad メソッド (省略なし)
