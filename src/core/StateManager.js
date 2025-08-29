@@ -29,7 +29,7 @@ export default class StateManager extends Phaser.Events.EventEmitter {
         }
 
     }
-}
+
       // --- f (ゲーム変数) の管理 ---
 
     /**
