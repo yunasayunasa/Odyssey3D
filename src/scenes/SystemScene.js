@@ -58,7 +58,7 @@ export default class SystemScene extends Phaser.Scene {
         // ★ "else if" にすることで、デバッグ起動モードの時は絶対に実行されなくなる
         this._startInitialGame(this.initialGameData);
     }
-
+    }
     /**
      * 初期ゲームを起動する内部メソッド
      * @param {object} initialData - PreloadSceneから渡されたデータ
