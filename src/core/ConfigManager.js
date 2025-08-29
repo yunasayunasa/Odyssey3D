@@ -11,7 +11,7 @@ const configDefs = {
         label: 'タイプ音',
         options: { 'se': '効果音', 'none': '無し' },
         defaultValue: 'se'
-    }
+    },
       // プレイヤーには表示しないが、内部的に保持する
     debugMode: { type: 'internal', defaultValue: false }, 
 };
