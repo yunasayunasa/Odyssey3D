@@ -138,23 +138,25 @@ export default class EditableScene extends Phaser.Scene {
      * 指定されたゲームオブジェクトを編集可能（ドラッグ可能など）にする
      * @param {Phaser.GameObjects.GameObject} gameObject - 編集可能にしたいオブジェクト
      */
-    makeEditable(gameObject) {
-        if (!this.isEditorMode || !gameObject) return;
-        
-        // オブジェクトをインタラクティブ（操作可能）にする
+   makeEditable(gameObject) {
+    if (!this.isEditorMode || !gameObject) return;
+    
+    // ★★★ ここからが修正箇所 ★★★
+    try {
+        // setInteractiveをtry...catchで囲む
         gameObject.setInteractive();
-
-        // オブジェクトをドラッグ可能にする
+        
+        // 成功した場合のみ、draggableを設定
         this.input.setDraggable(gameObject, true);
         
-        // マウスオーバーで緑色に光らせる（視覚的なフィードバック）
-        gameObject.on('pointerover', () => { 
-            gameObject.setTint(0x00ff00); 
-        });
-        gameObject.on('pointerout', () => { 
-            gameObject.clearTint(); 
-        });
+        gameObject.on('pointerover', () => { gameObject.setTint(0x00ff00); });
+        gameObject.on('pointerout', () => { gameObject.clearTint(); });
+
+    } catch (e) {
+        console.warn(`[EditableScene] Object "${gameObject.name}" could not be made interactive. Did you forget setSize()?`, e);
     }
+    // ★★★ ここまでが修正箇所 ★★★
+}
 
     /**
      * 現在のシーンのレイアウトをJSON形式でコンソールに出力する

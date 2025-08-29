@@ -33,7 +33,11 @@ export default class CoinHud extends Phaser.GameObjects.Container {
 
         // ★★★ StateManagerの変更イベントを直接購読 ★★★
         this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
-
+    // ★★★ このコンテナの大きさを定義 ★★★
+        // (例えば、背景画像の幅と高さに合わせる)
+        const width = 150; // 仮の幅
+        const height = 50;  // 仮の高さ
+        this.setSize(width, height);
         scene.add.existing(this);
     }
 
