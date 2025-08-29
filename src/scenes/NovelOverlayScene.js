@@ -162,24 +162,36 @@ export default class NovelOverlayScene extends Phaser.Scene {
     // [chara_show]などのタグハンドラがキャラクター画像を追加した後、
     // このメソッドを呼び出すように、ハンドラを改造する必要があります。
     enableDragFor(gameObject) {
-        // エディタモードでない場合は、何もしない
-        if (!this.isEditorMode) return;
+    // エディタモードでない場合は、何もしない
+    if (!this.isEditorMode) return;
 
-        // オブジェクトに名前がない場合は、識別用に名前を付ける
-        if (!gameObject.name) {
-            gameObject.name = `editable_${this.children.list.length}`;
-        }
-        
-        // オブジェクトをドラッグ可能にする
-        this.input.setDraggable(gameObject, true);
-
-        // (オプション) ドラッグ可能なオブジェクトを分かりやすくするために、枠線を表示する
-        gameObject.setInteractive(); // setDraggableの前でも後でもOK
-        gameObject.on('pointerover', () => { gameObject.setTint(0x00ff00); });
-        gameObject.on('pointerout', () => { gameObject.clearTint(); });
-
-        console.log(`[Editor] Object "${gameObject.name}" is now draggable.`);
+    // オブジェクトに名前がない場合は、識別用に名前を付ける
+    if (!gameObject.name) {
+        gameObject.name = `editable_${this.children.list.length}`;
     }
+    
+    // ★★★ ここからが修正箇所 ★★★
+    
+    // 1. まず、オブジェクトをインタラクティブ（操作可能）にする
+    gameObject.setInteractive();
+
+    // 2. 次に、ドラッグ可能にする
+    this.input.setDraggable(gameObject, true);
+    
+    // ★★★ ここまでが修正箇所 ★★★
+
+    // (オプション) ドラッグ可能なオブジェクトを分かりやすくするために、枠線を表示する
+    // setInteractiveは既に呼ばれているので、イベントリスナーを追加するだけ
+    gameObject.on('pointerover', () => { 
+        // 既にTintがついている可能性を考慮して、加算色にするなどの工夫も可能
+        gameObject.setTint(0x00ff00); 
+    });
+    gameObject.on('pointerout', () => { 
+        gameObject.clearTint(); 
+    });
+
+    console.log(`[Editor] Object "${gameObject.name}" is now draggable.`);
+}
 
 
    // ★★★ 安定性のためのshutdownメソッドを実装 ★★★
