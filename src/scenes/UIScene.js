@@ -1,31 +1,26 @@
+// src/scenes/UIScene.js (構文修正版)
+
+import EditableScene from './EditableScene.js';
 import CoinHud from '../ui/CoinHud.js';
 import HpBar from '../ui/HpBar.js';
-import EditableScene from './EditableScene.js'; // ★ 親クラスをインポート
 
-export default class UIScene  extends EditableScene {
+export default class UIScene extends EditableScene {
     
     constructor() {
-        super({ key: 'UIScene', active: false });
-       
+        super({ key: 'UIScene' }); // 'active: false'はPhaserが自動で処理するので不要
+        
         this.menuButton = null;
         this.panel = null;
         this.isPanelOpen = false;
         this.coinHud = null;
         this.playerHpBar = null;
-        this.enemyHpBar = null; // バトルシーン用に敵HPバーも管理
+        this.enemyHpBar = null;
     }
 
-     /**
-     * EditableSceneから呼び出される、このシーン独自のinit処理
-     */
     handleInit(data) {
-        // このシーンはシナリオから直接データを受け取ることはないので、通常は空
         console.log("UIScene: handleInit");
     }
 
-      /**
-     * EditableSceneから呼び出される、このシーン独自のcreate処理
-     */
     handleCreate() {
         console.log("UIScene: 作成・初期化");
         this.scene.bringToTop();
@@ -34,9 +29,8 @@ export default class UIScene  extends EditableScene {
         const gameWidth = 1280;
         const gameHeight = 720;
 
-        // --- 1. パネルと、その中のボタンを生成 ---
-        this.panel = this.add.container(0, gameHeight + 120); // 初期位置は画面下
-        
+        // --- パネルと、その中のボタンを生成 ---
+        this.panel = this.add.container(0, gameHeight + 120);
         const panelBg = this.add.rectangle(gameWidth / 2, 0, gameWidth, 120, 0x000000, 0.8).setInteractive();
         const saveButton = this.add.text(0, 0, 'セーブ', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5).setInteractive();
         const loadButton = this.add.text(0, 0, 'ロード', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5).setInteractive();
@@ -44,10 +38,9 @@ export default class UIScene  extends EditableScene {
         const configButton = this.add.text(0, 0, '設定', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5).setInteractive();
         const autoButton = this.add.text(0, 0, 'オート', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5).setInteractive();
         const skipButton = this.add.text(0, 0, 'スキップ', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5).setInteractive();
-        
         this.panel.add([panelBg, saveButton, loadButton, backlogButton, configButton, autoButton, skipButton]);
 
-        // --- 2. パネル内のボタンのレイアウトを確定 ---
+        // --- パネル内のボタンのレイアウトを確定 ---
         const buttons = [saveButton, loadButton, backlogButton, configButton, autoButton, skipButton];
         const areaStartX = 250;
         const areaWidth = gameWidth - areaStartX - 100;
@@ -56,72 +49,37 @@ export default class UIScene  extends EditableScene {
             button.setX(areaStartX + (buttonMargin * index) + (buttonMargin / 2));
         });
 
-        // --- 3. メインの「メニュー」ボタンを生成・配置 ---
-        this.menuButton = this.add.text(100, gameHeight - 50, 'MENU', { fontSize: '36px', fill: '#fff' }).setOrigin(0.5).setInteractive();
+        // --- メインの「メニュー」ボタンを生成・配置 ---
+        this.menuButton = this.add.text(100, gameHeight - 50, 'MENU', { fontSize: '36px', fill: '#fff' }).setOrigin(0.5);
 
-        // --- 4. すべてのイベントリスナーを、ここで一括設定 ---
-        
-        // パネル背景は、クリックイベントを止めるだけ
-        panelBg.on('pointerdown', (pointer, localX, localY, event) => {
-            event.stopPropagation();
-        });
-
-        // メニューボタンは、パネルの開閉をトリガー
-        this.menuButton.on('pointerdown', (pointer, localX, localY, event) => {
-            this.togglePanel();
-            event.stopPropagation();
-        });
-
-        // 各機能ボタン
-        saveButton.on('pointerdown', (pointer, localX, localY, event) => {
-            this.openScene('SaveLoadScene', { mode: 'save' });
-            event.stopPropagation();
-        });
-        loadButton.on('pointerdown', (pointer, localX, localY, event) => {
-            this.openScene('SaveLoadScene', { mode: 'load' });
-            event.stopPropagation();
-        });
-        backlogButton.on('pointerdown', (pointer, localX, localY, event) => {
-            this.openScene('BacklogScene');
-            event.stopPropagation();
-        });
-        configButton.on('pointerdown', (pointer, localX, localY, event) => {
-            this.openScene('ConfigScene');
-            event.stopPropagation();
-        });
-        autoButton.on('pointerdown', (pointer, localX, localY, event) => {
-            this.toggleGameMode('auto');
-            event.stopPropagation();
-        });
-        skipButton.on('pointerdown', (pointer, localX, localY, event) => {
-            this.toggleGameMode('skip');
-            event.stopPropagation();
-        });
+        // --- イベントリスナーを、ここで一括設定 ---
+        panelBg.on('pointerdown', e => e.stopPropagation());
+        this.menuButton.on('pointerdown', e => { this.togglePanel(); e.stopPropagation(); });
+        saveButton.on('pointerdown', e => { this.openScene('SaveLoadScene', { mode: 'save' }); e.stopPropagation(); });
+        loadButton.on('pointerdown', e => { this.openScene('SaveLoadScene', { mode: 'load' }); e.stopPropagation(); });
+        backlogButton.on('pointerdown', e => { this.openScene('BacklogScene'); e.stopPropagation(); });
+        configButton.on('pointerdown', e => { this.openScene('ConfigScene'); e.stopPropagation(); });
+        autoButton.on('pointerdown', e => { this.toggleGameMode('auto'); e.stopPropagation(); });
+        skipButton.on('pointerdown', e => { this.toggleGameMode('skip'); e.stopPropagation(); });
         
         // --- HUDのインスタンスを生成 ---
         this.coinHud = new CoinHud(this, { x: 100, y: 50, stateManager: stateManager });
         this.playerHpBar = new HpBar(this, { x: 100, y: 100, width: 200, height: 25, type: 'player', stateManager: stateManager });
-        // BattleSceneにしか出てこない敵HPバーもここで作ってしまう
         this.enemyHpBar = new HpBar(this, { x: this.scale.width - 100 - 250, y: 100, width: 250, height: 25, type: 'enemy', stateManager: stateManager });
 
- // isEditorModeのチェックと、makeEditableの呼び出しを削除する
-        // (親クラスが自動でやってくれるので、ここでは不要)
-        
-        // ただし、JSONで識別するための名前だけは、ここで付けておく
+        // JSONで識別するための名前を付ける
         this.menuButton.name = 'menu_button';
         this.coinHud.name = 'coin_hud';
         this.playerHpBar.name = 'player_hp_bar';
         this.enemyHpBar.name = 'enemy_hp_bar';
-        }
-
-
+        this.panel.name = 'bottom_panel'; // パネルにも名前を付けると便利
+        
         // --- SystemSceneからの通知を受け取るリスナー ---
         const systemScene = this.scene.get('SystemScene');
         systemScene.events.on('transition-complete', this.onSceneTransition, this);
         
-       
-        console.log("UI作成");
-    }
+        console.log("UI作成完了");
+    } // ★★★ 足りなかった `}` をここに追加 ★★★
 
     // --- 以下、このクラスが持つメソッド群 ---
    onSceneTransition(newSceneKey) {
