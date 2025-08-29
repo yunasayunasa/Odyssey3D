@@ -1,9 +1,11 @@
 // src/scenes/ActionScene.js
 
 import CoinHud from '../ui/CoinHud.js'; // CoinHudは使用されていませんが、もし使うなら残します
-export default class ActionScene extends Phaser.Scene {
+import EditableScene from './EditableScene.js'; // ★ 親クラスをインポート
+export default class ActionScene extends EditableScene {
     constructor() {
-        super('ActionScene');
+         super({key:'ActionScene', active :false});
+        
         this.receivedParams = null; 
         this.eventEmitted = false;
         this.winButton = null;
@@ -20,6 +22,7 @@ export default class ActionScene extends Phaser.Scene {
    // src/scenes/ActionScene.js
 
     create() {
+        super.create();
         console.log("ActionScene: create 開始");
         this.cameras.main.setBackgroundColor('#4a86e8');
         

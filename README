@@ -204,6 +204,9 @@ HUDは操作しない
 
 書式: @asset type="種類" key="管理キー" path="ファイルパス"
 配置場所: シナリオファイルの先頭（ラベルや地の文より前）に記述してください。
+EditableSceneを継承する 
+シーンにビジュアルなエディタ機能を持たせるため、Phaser.Sceneではなく、import EditableScene from './EditableScene.js'して、class YourScene extends EditableSceneとしてください。
+constructorではsuper({ key: 'YourSceneKey' })を、createではsuper.create()を最初に呼び出してください。
 このマニュアルが、あなたの創造の旅の信頼できる羅針盤となることを願っています。
 さあ、あなただけの物語を始めましょう！
 

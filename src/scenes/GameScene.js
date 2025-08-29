@@ -4,9 +4,9 @@ import StateManager from '../core/StateManager.js';
 import MessageWindow from '../ui/MessageWindow.js';
 import ConfigManager from '../core/ConfigManager.js';
 import { tagHandlers } from '../handlers/index.js';
+import EditableScene from './EditableScene.js'; // ★ 親クラスをインポート
 
-
-export default class GameScene extends Phaser.Scene {
+export default class GameScene  extends EditableScene {
     constructor() {
         super({key:'GameScene', active :false});
         // プロパティの初期化
@@ -54,7 +54,7 @@ export default class GameScene extends Phaser.Scene {
    // src/scenes/GameScene.js の create() メソッドの正しい形
 
         async create() { 
-            
+            super.create();
             console.log("GameScene: クリエイト処理を開始します。");
         this.cameras.main.setBackgroundColor('#000000');
         
