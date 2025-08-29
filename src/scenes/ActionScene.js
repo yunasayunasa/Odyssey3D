@@ -95,7 +95,12 @@ export default class ActionScene extends Phaser.Scene {
             }
         });
         console.log("ActionScene: create 完了");
+     const configManager = this.sys.registry.get('configManager');
     
+    // ★★★ デバッグモードがONの場合のみ、エディタ機能を有効化 ★★★
+    if (configManager.getValue('debugMode')) {
+        this.initEditorControls(); // 3Dエディタ機能を初期化
+    }
 
      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         // ★★★ これが修正の核心 ★★★

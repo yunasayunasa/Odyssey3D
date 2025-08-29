@@ -273,6 +273,12 @@ export default class BattleScene extends Phaser.Scene {
                 });
             });
         }
+         const configManager = this.sys.registry.get('configManager');
+    
+    // ★★★ デバッグモードがONの場合のみ、エディタ機能を有効化 ★★★
+    if (configManager.getValue('debugMode')) {
+        this.initEditorControls(); // 3Dエディタ機能を初期化
+    }
     }
 
 

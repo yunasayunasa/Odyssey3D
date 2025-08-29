@@ -12,6 +12,8 @@ const configDefs = {
         options: { 'se': '効果音', 'none': '無し' },
         defaultValue: 'se'
     }
+      // プレイヤーには表示しないが、内部的に保持する
+    debugMode: { type: 'internal', defaultValue: false }, 
 };
 
 const STORAGE_KEY = 'my_novel_engine_config';

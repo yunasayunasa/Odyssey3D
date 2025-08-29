@@ -34,31 +34,17 @@ export default class SystemScene extends Phaser.Scene {
             this._startInitialGame(this.initialGameData);
         }
 
-          // 1. StateManagerから起動パラメータを取得
-        const stateManager = this.sys.registry.get('stateManager');
-    const bootParams = stateManager.sf.boot_params || {};
-    const targetSceneKey = bootParams.edit_scene || bootParams.debug_scene;
+         const configManager = this.sys.registry.get('configManager');
+    
+    // ★★★ "edit_scene" パラメータはもう使わない ★★★
+    // 起動時のデバッグジャンプは、次のステップで実装
 
-    // --- 起動モードを完全に分岐させる ---
-
-    if (targetSceneKey) {
-        // --- 1. エディタ/デバッグ起動モード ---
-        console.warn(`[SystemScene] デバッグ起動モードを検出。シーン[${targetSceneKey}]を直接起動します。`);
-        
-        const sceneData = { ...bootParams };
-        delete sceneData.debug;
-        delete sceneData.edit_scene;
-        delete sceneData.debug_scene;
-
-        this.scene.launch('UIScene');
-        this._startAndMonitorScene(targetSceneKey, sceneData);
-
-    } else if (this.initialGameData) {
-        // --- 2. 通常のゲーム起動モード ---
-        // ★ "else if" にすることで、デバッグ起動モードの時は絶対に実行されなくなる
+    // 通常のゲーム起動
+    if (this.initialGameData) {
         this._startInitialGame(this.initialGameData);
     }
     }
+
     /**
      * 初期ゲームを起動する内部メソッド
      * @param {object} initialData - PreloadSceneから渡されたデータ
@@ -227,4 +213,14 @@ this.tweens.killAll();
         console.log(`[SystemScene] シーン[${sceneKey}]の遷移が完了。ゲーム全体の入力を再有効化。`);
         this.events.emit('transition-complete', sceneKey);
     }
+
+    update() {
+    // 例：Dキーでデバッグモードをトグル
+    if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('D'))) {
+        const configManager = this.sys.registry.get('configManager');
+        const currentState = configManager.getValue('debugMode');
+        configManager.setValue('debugMode', !currentState);
+        console.warn(`--- DEBUG MODE ${!currentState ? 'ON' : 'OFF'} ---`);
+    }
+}
 }
