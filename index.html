@@ -27,7 +27,25 @@
     
     <!-- Babylon.js専用のcanvas (最初は非表示) -->
     <canvas id="babylon-canvas" style="display: none;"></canvas>
-
+    <div id="editor-panel" style="
+        display: none; /* 普段は隠しておく */
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: sans-serif;
+        width: 250px;
+        z-index: 100; /* Phaserのcanvasより必ず手前に */
+    ">
+        <h4 id="editor-title" style="margin: 0 0 10px 0; border-bottom: 1px solid #555; padding-bottom: 5px;">No Object Selected</h4>
+        <div id="editor-props">
+            <!-- プロパティはここにJavaScriptで動的に追加される -->
+        </div>
+    </div>
+    <!-- ★★★ ここまで追加 ★★★ -->
     <script type="module" src="src/main.js"></script>
 </body>
 </html>

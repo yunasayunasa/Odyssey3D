@@ -8,7 +8,10 @@ export default class EditableScene extends Phaser.Scene {
         this.isEditorMode = false;
         this.stateManager = null;
         this.selectedObject = null;
-        this.editorInitialized = false; // エディタが初期化済みかのフラグ
+        this.editorInitialized = false; 
+          this.editorPanel = null;
+        this.editorTitle = null;
+        this.editorPropsContainer = null;
     }
 
     /**
@@ -97,22 +100,32 @@ export default class EditableScene extends Phaser.Scene {
 
         console.warn(`[EditableScene] Editor Controls Initialized for scene: ${this.scene.key}`);
 
+        this.editorPanel = document.getElementById('editor-panel');
+        this.editorTitle = document.getElementById('editor-title');
+        this.editorPropsContainer = document.getElementById('editor-props');
+        if (this.editorPanel) {
+            this.editorPanel.style.display = 'block';
+        }
+
         // ドラッグ機能のイベントリスナー
-        this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
-            gameObject.x = Math.round(dragX); // 座標を整数に丸めると綺麗に配置しやすい
-            gameObject.y = Math.round(dragY);
-        });
+      this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
+    gameObject.x = Math.round(dragX);
+    gameObject.y = Math.round(dragY);
+    
+    // ★ ドラッグ中もプロパティパネルを更新
+    if (gameObject === this.selectedObject) {
+        this.updatePropertyPanel();
+    }
+});
 
         // オブジェクト選択機能のイベントリスナー
-        // 'gameobjectdown' は、インタラクティブなオブジェクトがクリックされたときに発火する
-        this.input.on('gameobjectdown', (pointer, gameObject) => {
+           this.input.on('gameobjectdown', (pointer, gameObject) => {
             if (!this.isEditorMode) return;
-
-            // 選択中のオブジェクトを更新
             this.selectedObject = gameObject;
             console.log(`[Editor] Selected: ${gameObject.name || '(no name)'}`);
-            // (ここに、選択したオブジェクトをハイライトする処理や、
-            //  プロパティウィンドウに情報を表示する処理を追加していく)
+            
+            // ★★★ 選択したオブジェクトのプロパティをウィンドウに表示する ★★★
+            this.updatePropertyPanel();
         });
         
         // 何もない場所をクリックしたら、選択を解除する
@@ -133,6 +146,62 @@ export default class EditableScene extends Phaser.Scene {
 
         this.editorInitialized = true;
     }
+
+     // ★★★ プロパティパネルを更新するメソッドを新規作成 ★★★
+    updatePropertyPanel() {
+        if (!this.isEditorMode || !this.editorPropsContainer) return;
+        
+        // まず中身を空にする
+        this.editorPropsContainer.innerHTML = '';
+        
+        if (!this.selectedObject) {
+            this.editorTitle.innerText = 'No Object Selected';
+            return;
+        }
+
+        this.editorTitle.innerText = `Editing: ${this.selectedObject.name}`;
+
+        // --- 編集したいプロパティを定義 ---
+        const properties = {
+            x: { type: 'number', min: 0, max: 1280, step: 1 },
+            y: { type: 'number', min: 0, max: 720, step: 1 },
+            scaleX: { type: 'range', min: 0.1, max: 5, step: 0.1 },
+            scaleY: { type: 'range', min: 0.1, max: 5, step: 0.1 },
+            angle: { type: 'range', min: -180, max: 180, step: 1 },
+            alpha: { type: 'range', min: 0, max: 1, step: 0.05 }
+        };
+
+        // --- プロパティごとにHTML入力要素を動的に生成 ---
+        for (const key in properties) {
+            const prop = properties[key];
+            const value = this.selectedObject[key];
+            
+            const row = document.createElement('div');
+            row.style.marginBottom = '8px';
+            
+            const label = document.createElement('label');
+            label.innerText = `${key}: `;
+            label.style.display = 'inline-block';
+            label.style.width = '70px';
+
+            const input = document.createElement('input');
+            input.type = prop.type;
+            input.min = prop.min;
+            input.max = prop.max;
+            input.step = prop.step;
+            input.value = value;
+
+            // ★ 入力が変更されたら、オブジェクトのプロパティをリアルタイムに更新
+            input.addEventListener('input', (e) => {
+                this.selectedObject[key] = parseFloat(e.target.value);
+            });
+
+            row.appendChild(label);
+            row.appendChild(input);
+            this.editorPropsContainer.appendChild(row);
+        }
+    }
+    
 
     /**
      * 指定されたゲームオブジェクトを編集可能（ドラッグ可能など）にする
@@ -212,6 +281,10 @@ export default class EditableScene extends Phaser.Scene {
         // キーボードイベントを明示的に削除
         if (this.input && this.input.keyboard) {
              this.input.keyboard.off('keydown-P', this.exportLayoutToJson, this);
+        }
+
+        if (this.editorPanel) {
+            this.editorPanel.style.display = 'none';
         }
         super.shutdown();
     }
