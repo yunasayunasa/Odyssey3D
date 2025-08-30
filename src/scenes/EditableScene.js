@@ -40,31 +40,18 @@ export default class EditableScene extends Phaser.Scene {
     }
 
       // ★★★ updateメソッドを新設（または修正） ★★★
-    update(time, delta) {
-        // --- エディタの初回初期化 ---
-        // isEditorModeがtrueで、まだ初期化されていなければ、一度だけ実行
-        if (this.isEditorMode && !this.editorInitialized) {
-            this.initEditorControls();
-            
-            // ★ シーン上のすべてのオブジェクトを編集可能にする
-            this.children.list.forEach(gameObject => {
-                // コンテナと、その中の子要素もすべて編集可能にする
-                if (gameObject.list) {
-                    gameObject.list.forEach(child => {
-                        if(child.name) this.makeEditable(child);
-                    });
-                }
-                if(gameObject.name) this.makeEditable(gameObject);
-            });
-            
-            this.editorInitialized = true;
-        }
-
-        // --- 子シーンのupdate処理を呼び出す ---
-        if (this.handleUpdate) {
-            this.handleUpdate(time, delta);
-        }
+   update(time, delta) {
+    // ★★★ ここからが修正箇所 ★★★
+    // editorInitializedフラグは、initEditorControlsの中で管理する
+    if (this.isEditorMode && !this.editorInitialized) {
+        this.initEditorControls();
     }
+    // ★★★ ここまでが修正箇所 ★★★
+
+    if (this.handleUpdate) {
+        this.handleUpdate(time, delta);
+    }
+}
 
     // ★★★ 子シーンが実装するための、空のupdateメソッドを用意 ★★★
     handleUpdate(time, delta) {
@@ -130,15 +117,23 @@ export default class EditableScene extends Phaser.Scene {
         
         // 何もない場所をクリックしたら、選択を解除する
         this.input.on('pointerdown', (pointer) => {
-            // 'gameobjectdown' はこのイベントより先に発火するので、
-            // 0.1秒後にチェックして、まだ何も選択されていなければ選択解除とみなす
-            setTimeout(() => {
-                if (this.input.manager.hitTest(pointer, []).length === 0) {
-                    this.selectedObject = null;
-                    console.log("[Editor] Deselected.");
-                }
-            }, 100);
-        });
+    // 'gameobjectdown' はこのイベントより先に発火する
+    
+    // ★★★ ここからが修正箇所 ★★★
+    // このシーンに存在する、インタラクティブなオブジェクトのリストを取得
+    const interactiveObjects = this.input.getInteractiveObjects();
+    
+    // クリックされた場所に、このシーンのオブジェクトが何もなかった場合
+    if (this.input.manager.hitTest(pointer, interactiveObjects, this.cameras.main).length === 0) {
+        
+        // もし、現在選択中のオブジェクトが、このシーンのものだったら、選択を解除する
+        if (this.selectedObject && this.selectedObject.scene === this) {
+            this.selectedObject = null;
+            this.updatePropertyPanel(); // パネルを更新（隠す）
+        }
+    }
+    // ★★★ ここまでが修正箇所 ★★★
+});
 
 
         // JSONエクスポート機能のキーボードショートカット
