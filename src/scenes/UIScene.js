@@ -82,7 +82,7 @@ export default class UIScene extends EditableScene {
         
         console.log("UI作成完了");
       // ★★★ 自分のシーンのオブジェクトを編集可能にする ★★★
-      
+      this.input.setHitArea(this.children.list);
 }
     // --- 以下、このクラスが持つメソッド群 ---
    onSceneTransition(newSceneKey) {
