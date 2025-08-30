@@ -217,7 +217,15 @@ export default class EditableScene extends Phaser.Scene {
         
         // 成功した場合のみ、draggableを設定
         this.input.setDraggable(gameObject, true);
-        
+          if (typeof gameObject.setTint === 'function') {
+            // マウスオーバーで緑色に光らせる
+            gameObject.on('pointerover', () => { 
+                gameObject.setTint(0x00ff00); 
+            });
+            gameObject.on('pointerout', () => { 
+                gameObject.clearTint(); 
+            });
+        }
         gameObject.on('pointerover', () => { gameObject.setTint(0x00ff00); });
         gameObject.on('pointerout', () => { gameObject.clearTint(); });
 
