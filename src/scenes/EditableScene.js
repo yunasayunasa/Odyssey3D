@@ -213,6 +213,17 @@ updatePropertyPanel() {
 }
 
     /**
+     * 動的に追加されたゲームオブジェクトを、後から編集可能にする
+     * @param {Phaser.GameObjects.GameObject} gameObject - 新しく追加されたオブジェクト
+     */
+    addEditableObject(gameObject) {
+        // エディタモードであり、かつエディタが既に初期化済みの場合のみ実行
+        if (this.isEditorMode && this.editorInitialized) {
+            this.makeEditable(gameObject);
+        }
+    }
+
+    /**
      * 現在のシーンのレイアウトをJSON形式でコンソールに出力する
      */
     exportLayoutToJson() {
