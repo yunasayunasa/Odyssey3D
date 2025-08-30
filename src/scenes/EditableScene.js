@@ -94,70 +94,71 @@ export default class EditableScene extends Phaser.Scene {
     /**
      * エディタのイベントリスナーなどを初期化する
      */
-    initEditorControls() {
-        // 既に初期化済みなら何もしない（二重登録防止）
-        if (this.editorInitialized) return;
-
-        console.warn(`[EditableScene] Editor Controls Initialized for scene: ${this.scene.key}`);
-
-        this.editorPanel = document.getElementById('editor-panel');
-        this.editorTitle = document.getElementById('editor-title');
-        this.editorPropsContainer = document.getElementById('editor-props');
-        if (this.editorPanel) {
-            this.editorPanel.style.display = 'block';
-        }
-
-        // ドラッグ機能のイベントリスナー
-      this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
-    gameObject.x = Math.round(dragX);
-    gameObject.y = Math.round(dragY);
+ initEditorControls() {
+    if (this.editorInitialized) return;
+    console.warn(`[EditableScene] Editor Controls Initialized for scene: ${this.scene.key}`);
     
-    // ★ ドラッグ中もプロパティパネルを更新
-    if (gameObject === this.selectedObject) {
-        this.updatePropertyPanel();
-    }
-});
+    // HTML要素を取得
+    this.editorPanel = document.getElementById('editor-panel');
+    this.editorTitle = document.getElementById('editor-title');
+    this.editorPropsContainer = document.getElementById('editor-props');
+    
+    // ★★★ ここからが修正箇所 ★★★
 
-        // オブジェクト選択機能のイベントリスナー
-           this.input.on('gameobjectdown', (pointer, gameObject) => {
-            if (!this.isEditorMode) return;
-            this.selectedObject = gameObject;
-            console.log(`[Editor] Selected: ${gameObject.name || '(no name)'}`);
+    // --- オブジェクト選択/選択解除 ---
+    this.input.on('pointerdown', (pointer) => {
+        // gameobjectdownより先に発火するので、少し待ってから判定
+        setTimeout(() => {
+            // pointerdownでヒットしたオブジェクトのリストを取得
+            const hitObjects = this.input.manager.hitTest(pointer, this.children.list, this.cameras.main);
             
-            // ★★★ 選択したオブジェクトのプロパティをウィンドウに表示する ★★★
+            // 編集可能なオブジェクトがヒットしたかチェック
+            const editableHit = hitObjects.find(obj => obj.input && obj.input.draggable);
+
+            if (editableHit) {
+                // ヒットしたら、それを選択
+                this.selectedObject = editableHit;
+            } else {
+                // 何もない場所をクリックしたら、選択を解除
+                this.selectedObject = null;
+            }
+            // 選択状態が変わったので、プロパティパネルを更新
             this.updatePropertyPanel();
-        });
-        
-        // 何もない場所をクリックしたら、選択を解除する
-        this.input.on('pointerdown', (pointer) => {
-            // 'gameobjectdown' はこのイベントより先に発火するので、
-            // 0.1秒後にチェックして、まだ何も選択されていなければ選択解除とみなす
-            setTimeout(() => {
-                if (this.input.manager.hitTest(pointer, []).length === 0) {
-                    this.selectedObject = null;
-                    console.log("[Editor] Deselected.");
-                }
-            }, 100);
-        });
+        }, 0);
+    });
 
+    // --- ドラッグ機能 ---
+    this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
+        gameObject.x = Math.round(dragX);
+        gameObject.y = Math.round(dragY);
+        // ドラッグ中もプロパティパネルの数値を更新
+        if (gameObject === this.selectedObject) {
+            this.updatePropertyPanel();
+        }
+    });
 
-        // JSONエクスポート機能のキーボードショートカット
-        this.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
+    // JSONエクスポート機能
+    this.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
 
-        this.editorInitialized = true;
-    }
+    // ★★★ gameobjectdownリスナーは、pointerdownで統合したので不要 ★★★
+    
+    this.editorInitialized = true;
+}
 
      // ★★★ プロパティパネルを更新するメソッドを新規作成 ★★★
-    updatePropertyPanel() {
-        if (!this.isEditorMode || !this.editorPropsContainer) return;
-        
-        // まず中身を空にする
-        this.editorPropsContainer.innerHTML = '';
-        
-        if (!this.selectedObject) {
-            this.editorTitle.innerText = 'No Object Selected';
-            return;
-        }
+   updatePropertyPanel() {
+    if (!this.isEditorMode || !this.editorPanel) return;
+
+    // ★★★ パネルの表示/非表示をここで制御 ★★★
+    if (!this.selectedObject) {
+        // 何も選択されていなければ、パネルを隠す
+        this.editorPanel.style.display = 'none';
+        return;
+    }
+
+    // オブジェクトが選択されたら、パネルを表示する
+    this.editorPanel.style.display = 'block';
+    
 
         this.editorTitle.innerText = `Editing: ${this.selectedObject.name}`;
 
