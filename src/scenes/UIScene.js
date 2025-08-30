@@ -82,16 +82,13 @@ export default class UIScene extends EditableScene {
         
         console.log("UI作成完了");
       // ★★★ 自分のシーンのオブジェクトを編集可能にする ★★★
-    if (this.isEditorMode) {
-        this.children.list.forEach(child => {
-            if (child.name) this.makeEditable(child);
-            if (child.list) { // コンテナの場合
-                child.list.forEach(c => { if (c.name) this.makeEditable(c); });
-            }
+      if (this.isEditorMode) {
+        this.children.list.forEach(gameObject => {
+            // コンテナの中身も含めて再帰的に探索すると、より完璧
+            if (gameObject.name) this.makeEditable(gameObject);
         });
     }
 }
-
     // --- 以下、このクラスが持つメソッド群 ---
    onSceneTransition(newSceneKey) {
         console.log(`[UIScene] シーン遷移を検知。HUD表示を更新します。新しいシーン: ${newSceneKey}`);

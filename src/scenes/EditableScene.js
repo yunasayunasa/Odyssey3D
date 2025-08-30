@@ -43,23 +43,18 @@ export default class EditableScene extends Phaser.Scene {
 
       // ★★★ updateメソッドを新設（または修正） ★★★
      update(time, delta) {
-        // ★★★ チェックする対象を、静的プロパティに変更 ★★★
-        if (this.isEditorMode && !EditableScene.editorInitialized) {
+       if (this.isEditorMode && !EditableScene.editorInitialized) {
             this.initEditorControls();
-            
-            // ★★★ この初期化ロジックは、最初に起動したEditableSceneに任せるので、ここからは削除 ★★★
-            // this.children.list.forEach(gameObject => { ... });
-            
-            EditableScene.editorInitialized = true; // ★ 静的プロパティを更新
+            EditableScene.editorInitialized = true;
         }
+
+        if (this.handleUpdate) this.handleUpdate(time, delta);
+    }
             
          
 
-        // --- 子シーンのupdate処理を呼び出す ---
-        if (this.handleUpdate) {
-            this.handleUpdate(time, delta);
-        }
-    }
+       
+    
 
     // ★★★ 子シーンが実装するための、空のupdateメソッドを用意 ★★★
     handleUpdate(time, delta) {
@@ -89,60 +84,45 @@ export default class EditableScene extends Phaser.Scene {
     /**
      * エディタのイベントリスナーなどを初期化する
      */
- initEditorControls() {
-    if (this.editorInitialized) return;
-    console.warn(`[EditableScene] Editor Controls Initialized for scene: ${this.scene.key}`);
-    
-    // HTML要素を取得
-    this.editorPanel = document.getElementById('editor-panel');
-    this.editorTitle = document.getElementById('editor-title');
-    this.editorPropsContainer = document.getElementById('editor-props');
-    
-    // ★★★ ここからが修正箇所 ★★★
+ 
+    // --- 共通エディタ機能 ---
+    initEditorControls() {
+        console.warn(`[EditableScene] Global Editor Controls Initialized.`);
+        
+        this.editorPanel = document.getElementById('editor-panel');
+        this.editorTitle = document.getElementById('editor-title');
+        this.editorPropsContainer = document.getElementById('editor-props');
 
-    // --- オブジェクト選択/選択解除 ---
-     this.input.on('pointerdown', (pointer) => {
-            // ★ 現在アクティブな最前面のシーンを取得
-            const topScene = this.scene.manager.getScenes(true)[0];
-
-            // ★ 自分自身が最前面のシーンでなければ、何もしない
-            if (topScene !== this) return;
+        // ★ グローバルなポインターダウンイベントをリッスン
+        this.input.manager.on('pointerdown', (pointer) => {
+            if (!this.isEditorMode) return;
             
-            setTimeout(() => {
-                const hitObjects = this.input.manager.hitTest(pointer, this.children.list, this.cameras.main);
-                const editableHit = hitObjects.find(obj => obj.input && obj.input.draggable);
-                
-                // ★ selectedObjectはグローバルに一つだけにする
-                this.registry.set('editor_selected_object', editableHit || null);
-                
-                this.updatePropertyPanel();
-            }, 0);
+            // 最前面のアクティブなシーンを取得
+            const topScene = this.scene.manager.getScenes(true)[0];
+            const hitObjects = this.input.manager.hitTest(pointer, topScene.children.list, topScene.cameras.main);
+            const editableHit = hitObjects.find(obj => obj.input && obj.input.draggable);
+            
+            this.registry.set('editor_selected_object', editableHit || null);
+            this.updatePropertyPanel();
         });
 
-    // --- ドラッグ機能 ---
-    this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
-        gameObject.x = Math.round(dragX);
-        gameObject.y = Math.round(dragY);
-        // ドラッグ中もプロパティパネルの数値を更新
-        if (gameObject === this.selectedObject) {
-            this.updatePropertyPanel();
-        }
-    });
+        // ★ グローバルなドラッグイベントをリッスン
+        this.input.manager.on('drag', (pointer, gameObject, dragX, dragY) => {
+            gameObject.x = Math.round(dragX);
+            gameObject.y = Math.round(dragY);
+            if (gameObject === this.registry.get('editor_selected_object')) {
+                this.updatePropertyPanel();
+            }
+        });
 
-    // JSONエクスポート機能
-    this.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
-
-    // ★★★ gameobjectdownリスナーは、pointerdownで統合したので不要 ★★★
-    
-    this.editorInitialized = true;
-}
+        this.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
+    }
 
      // ★★★ プロパティパネルを更新するメソッドを新規作成 ★★★
-  updatePropertyPanel() {
-        // ★ 選択オブジェクトを、レジストリから取得する
-        const selectedObject = this.registry.get('editor_selected_object');
-        
+ updatePropertyPanel() {
         if (!this.isEditorMode || !this.editorPanel) return;
+
+        const selectedObject = this.registry.get('editor_selected_object');
         
         if (!selectedObject) {
             this.editorPanel.style.display = 'none';
@@ -151,6 +131,7 @@ export default class EditableScene extends Phaser.Scene {
 
         this.editorPanel.style.display = 'block';
         this.editorTitle.innerText = `Editing: ${selectedObject.name}`;
+        this.editorPropsContainer.innerHTML = '';
 
         // --- 編集したいプロパティを定義 ---
         const properties = {
@@ -182,9 +163,9 @@ export default class EditableScene extends Phaser.Scene {
             input.step = prop.step;
             input.value = value;
 
-            // ★ 入力が変更されたら、オブジェクトのプロパティをリアルタイムに更新
-            input.addEventListener('input', (e) => {
-                this.selectedObject[key] = parseFloat(e.target.value);
+              input.addEventListener('input', (e) => {
+                // レジストリから取得した、現在選択中のオブジェクトを直接変更
+                selectedObject[key] = parseFloat(e.target.value);
             });
 
             row.appendChild(label);
@@ -198,25 +179,15 @@ export default class EditableScene extends Phaser.Scene {
      * 指定されたゲームオブジェクトを編集可能（ドラッグ可能など）にする
      * @param {Phaser.GameObjects.GameObject} gameObject - 編集可能にしたいオブジェクト
      */
-   makeEditable(gameObject) {
-    if (!this.isEditorMode || !gameObject) return;
-    
-    // ★★★ ここからが修正箇所 ★★★
-    try {
-        // setInteractiveをtry...catchで囲む
-        gameObject.setInteractive();
-        
-        // 成功した場合のみ、draggableを設定
-        this.input.setDraggable(gameObject, true);
-          if (typeof gameObject.setTint === 'function') {
-            // マウスオーバーで緑色に光らせる
-            gameObject.on('pointerover', () => { 
-                gameObject.setTint(0x00ff00); 
-            });
-            gameObject.on('pointerout', () => { 
-                gameObject.clearTint(); 
-            });
-        }
+     makeEditable(gameObject) {
+        if (!this.isEditorMode || !gameObject) return;
+        try {
+            gameObject.setInteractive();
+            this.input.setDraggable(gameObject, true);
+            if (typeof gameObject.setTint === 'function') {
+                gameObject.on('pointerover', () => gameObject.setTint(0x00ff00));
+                gameObject.on('pointerout', () => gameObject.clearTint());
+            }
      
     } catch (e) {
         console.warn(`[EditableScene] Object "${gameObject.name}" could not be made interactive. Did you forget setSize()?`, e);
@@ -229,7 +200,7 @@ export default class EditableScene extends Phaser.Scene {
      */
     exportLayoutToJson() {
         if (!this.isEditorMode) return;
-
+        const topScene = this.scene.manager.getScenes(true)[0];
         console.log(`%c--- Exporting Layout for [${this.scene.key}] ---`, "color: lightgreen; font-weight: bold;");
         
         const exportData = {

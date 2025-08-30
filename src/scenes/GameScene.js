@@ -127,7 +127,15 @@ export default class GameScene  extends EditableScene {
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
             console.log("[LOG-BOMB] GameScene.create: END");
+
+             if (this.isEditorMode) {
+        this.children.list.forEach(gameObject => {
+            // コンテナの中身も含めて再帰的に探索すると、より完璧
+            if (gameObject.name) this.makeEditable(gameObject);
+        });
     }
+}
+    
 
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
     shutdown() {
