@@ -227,9 +227,7 @@ export default class EditableScene extends Phaser.Scene {
                 gameObject.clearTint(); 
             });
         }
-        gameObject.on('pointerover', () => { gameObject.setTint(0x00ff00); });
-        gameObject.on('pointerout', () => { gameObject.clearTint(); });
-
+     
     } catch (e) {
         console.warn(`[EditableScene] Object "${gameObject.name}" could not be made interactive. Did you forget setSize()?`, e);
     }
