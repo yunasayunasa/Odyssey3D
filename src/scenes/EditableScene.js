@@ -113,14 +113,14 @@ export default class EditableScene extends Phaser.Scene {
         });
 
         // --- 選択解除 ---
-        this.input.on('pointerdown', (pointer) => {
-            // ヒットテストを行い、何もヒットしなかった場合のみ選択を解除
-            if (this.input.hitTest(pointer, [], this.cameras.main).length === 0) {
-                this.registry.set('editor_selected_object', null);
-                this.updatePropertyPanel();
-            }
-        });
-        
+      this.input.on('pointerdown', (pointer) => {
+    // ★★★ この一行を修正 ★★★
+    // this.input.hitTest ではなく、this.input.manager.hitTest を使う
+    if (this.input.manager.hitTest(pointer, this.children.list, this.cameras.main).length === 0) {
+        this.registry.set('editor_selected_object', null);
+        this.updatePropertyPanel();
+    }
+});
         // --- JSONエクスポート ---
         this.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
 
@@ -134,9 +134,10 @@ export default class EditableScene extends Phaser.Scene {
 
 
      // ★★★ プロパティパネルを更新するメソッドを新規作成 ★★★
-  updatePropertyPanel() {
-        if (!this.isEditorMode || !this.editorPanel) return;
-        const selectedObject = this.registry.get('editor_selected_object');
+updatePropertyPanel() {
+    if (!this.isEditorMode || !this.editorPanel) return;
+    const selectedObject = this.registry.get('editor_selected_object');
+    
         
         if (!selectedObject || selectedObject.scene !== this) { // ★ 選択オブジェクトがこのシーンのものでなければ隠す
             this.editorPanel.style.display = 'none';
@@ -145,7 +146,8 @@ export default class EditableScene extends Phaser.Scene {
 
         this.editorPanel.style.display = 'block';
         this.editorTitle.innerText = `Editing: ${selectedObject.name}`;
-        this.editorPropsContainer.innerHTML = '';
+    this.editorPropsContainer.innerHTML = '';
+
 
         // --- 編集したいプロパティを定義 ---
         const properties = {
@@ -158,11 +160,12 @@ export default class EditableScene extends Phaser.Scene {
         };
 
         // --- プロパティごとにHTML入力要素を動的に生成 ---
-        for (const key in properties) {
-            const prop = properties[key];
-            const value = this.selectedObject[key];
-            
-            const row = document.createElement('div');
+         for (const key in properties) {
+        const prop = properties[key];
+        // ★★★ 修正箇所：`this.selectedObject` ではなく `selectedObject` を使う ★★★
+        const value = selectedObject[key];
+        
+        const row = document.createElement('div');
             row.style.marginBottom = '8px';
             
             const label = document.createElement('label');
@@ -177,9 +180,10 @@ export default class EditableScene extends Phaser.Scene {
             input.step = prop.step;
             input.value = value;
 
-                input.addEventListener('input', (e) => {
-                selectedObject[key] = parseFloat(e.target.value);
-            });
+               input.addEventListener('input', (e) => {
+            // ★★★ 修正箇所：`this.selectedObject` ではなく `selectedObject` を使う ★★★
+            selectedObject[key] = parseFloat(e.target.value);
+        });
 
             row.appendChild(label);
             row.appendChild(input);
