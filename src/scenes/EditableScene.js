@@ -89,107 +89,123 @@ export default class EditableScene extends Phaser.Scene {
      */
  
       // --- 共通エディタ機能 ---
-    initEditorControls() {
-        if (this.editorInitialized) return;
-        console.warn(`[EditableScene] Editor Controls Initialized for scene: ${this.scene.key}`);
-        
-        this.editorPanel = document.getElementById('editor-panel');
-        this.editorTitle = document.getElementById('editor-title');
-        this.editorPropsContainer = document.getElementById('editor-props');
+    // src/scenes/EditableScene.js
 
-        // --- ドラッグ機能 ---
-        this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
-            gameObject.x = Math.round(dragX);
-            gameObject.y = Math.round(dragY);
-            if (gameObject === this.registry.get('editor_selected_object')) {
-                this.updatePropertyPanel();
-            }
-        });
+initEditorControls() {
+    // このシーンが既にエディタとして初期化済みなら、何もしない（二重登録防止）
+    if (this.editorInitialized) return;
 
-        // --- オブジェクト選択 ---
-        this.input.on('gameobjectdown', (pointer, gameObject) => {
-            this.registry.set('editor_selected_object', gameObject);
-            this.updatePropertyPanel();
-        });
-
-        // --- 選択解除 ---
-      this.input.on('pointerdown', (pointer) => {
-    // ★★★ この一行を修正 ★★★
-    // this.input.hitTest ではなく、this.input.manager.hitTest を使う
-    if (this.input.manager.hitTest(pointer, this.children.list, this.cameras.main).length === 0) {
-        this.registry.set('editor_selected_object', null);
-        this.updatePropertyPanel();
-    }
-});
-        // --- JSONエクスポート ---
-        this.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
-
-        // --- このシーンのオブジェクトをすべて編集可能にする ---
-        this.children.list.forEach(gameObject => {
-            this.makeEditable(gameObject);
-        });
-
-        this.editorInitialized = true;
-    }
-
-
-     // ★★★ プロパティパネルを更新するメソッドを新規作成 ★★★
-updatePropertyPanel() {
-    if (!this.isEditorMode || !this.editorPanel) return;
-    const selectedObject = this.registry.get('editor_selected_object');
+    console.warn(`[EditableScene] Editor Controls Initialized for scene: ${this.scene.key}`);
     
-        
-        if (!selectedObject || selectedObject.scene !== this) { // ★ 選択オブジェクトがこのシーンのものでなければ隠す
-            this.editorPanel.style.display = 'none';
-            return;
+    // プロパティパネルのHTML要素を取得
+    this.editorPanel = document.getElementById('editor-panel');
+    this.editorTitle = document.getElementById('editor-title');
+    this.editorPropsContainer = document.getElementById('editor-props');
+
+    // --- 1. ドラッグ機能 ---
+    // このシーンで発生したdragイベントをリッスン
+    this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
+        gameObject.x = Math.round(dragX);
+        gameObject.y = Math.round(dragY);
+        // もしドラッグ中のオブジェクトが選択されていたら、パネルも更新
+        if (gameObject === this.selectedObject) {
+            this.updatePropertyPanel();
         }
+    });
 
-        this.editorPanel.style.display = 'block';
-        this.editorTitle.innerText = `Editing: ${selectedObject.name}`;
-    this.editorPropsContainer.innerHTML = '';
+    // --- 2. オブジェクト選択機能 ---
+    // このシーンのゲームオブジェクトがクリックされたら発火
+    this.input.on('gameobjectdown', (pointer, gameObject) => {
+        // 選択されたオブジェクトを、このシーンのプロパティとして保持
+        this.selectedObject = gameObject;
+        // プロパティパネルを更新
+        this.updatePropertyPanel();
+    });
+
+    // --- 3. 選択解除機能 ---
+    // このシーンの、何もない場所がクリックされたら発火
+    this.input.on('pointerdown', (pointer) => {
+        // クリックされた場所にオブジェクトがヒットしなかった場合
+        if (this.input.manager.hitTest(pointer, this.children.list, this.cameras.main).length === 0) {
+            // 選択を解除
+            this.selectedObject = null;
+            // プロパティパネルを更新（隠す）
+            this.updatePropertyPanel();
+        }
+    });
+    
+    // --- 4. JSONエクスポート機能 ---
+    this.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
+
+    this.editorInitialized = true;
+}
 
 
-        // --- 編集したいプロパティを定義 ---
-        const properties = {
-            x: { type: 'number', min: 0, max: 1280, step: 1 },
-            y: { type: 'number', min: 0, max: 720, step: 1 },
-            scaleX: { type: 'range', min: 0.1, max: 5, step: 0.1 },
-            scaleY: { type: 'range', min: 0.1, max: 5, step: 0.1 },
-            angle: { type: 'range', min: -180, max: 180, step: 1 },
-            alpha: { type: 'range', min: 0, max: 1, step: 0.05 }
-        };
+// src/scenes/EditableScene.js
 
-        // --- プロパティごとにHTML入力要素を動的に生成 ---
-         for (const key in properties) {
+updatePropertyPanel() {
+    // 必要なHTML要素や、エディタモードの状態をチェック
+    if (!this.isEditorMode || !this.editorPanel) return;
+    
+    // このシーンで選択されているオブジェクトを取得
+    const selectedObject = this.selectedObject;
+    
+    // 選択されているオブジェクトがなければ、パネルを隠して終了
+    if (!selectedObject) {
+        this.editorPanel.style.display = 'none';
+        return;
+    }
+
+    // オブジェクトが選択されていれば、パネルを表示
+    this.editorPanel.style.display = 'block';
+    
+    // パネルの内容を、選択されたオブジェクトの情報で更新
+    this.editorTitle.innerText = `Editing: ${selectedObject.name || '(no name)'}`;
+    this.editorPropsContainer.innerHTML = ''; // 中身を一度空にする
+
+    // 編集したいプロパティの定義
+    const properties = {
+        x: { type: 'number', min: 0, max: 1280, step: 1 },
+        y: { type: 'number', min: 0, max: 720, step: 1 },
+        scaleX: { type: 'range', min: 0.1, max: 5, step: 0.1 },
+        scaleY: { type: 'range', min: 0.1, max: 5, step: 0.1 },
+        angle: { type: 'range', min: -180, max: 180, step: 1 },
+        alpha: { type: 'range', min: 0, max: 1, step: 0.05 }
+    };
+    
+    // プロパティごとにHTML入力要素を動的に生成
+    for (const key in properties) {
+        // selectedObjectがそのプロパティを持っているか確認
+        if (selectedObject[key] === undefined) continue;
+
         const prop = properties[key];
-        // ★★★ 修正箇所：`this.selectedObject` ではなく `selectedObject` を使う ★★★
         const value = selectedObject[key];
         
         const row = document.createElement('div');
-            row.style.marginBottom = '8px';
-            
-            const label = document.createElement('label');
-            label.innerText = `${key}: `;
-            label.style.display = 'inline-block';
-            label.style.width = '70px';
+        row.style.marginBottom = '8px';
+        
+        const label = document.createElement('label');
+        label.innerText = `${key}: `;
+        label.style.display = 'inline-block';
+        label.style.width = '70px';
 
-            const input = document.createElement('input');
-            input.type = prop.type;
-            input.min = prop.min;
-            input.max = prop.max;
-            input.step = prop.step;
-            input.value = value;
+        const input = document.createElement('input');
+        input.type = prop.type;
+        input.min = prop.min;
+        input.max = prop.max;
+        input.step = prop.step;
+        input.value = value;
 
-               input.addEventListener('input', (e) => {
-            // ★★★ 修正箇所：`this.selectedObject` ではなく `selectedObject` を使う ★★★
+        // 入力が変更されたら、選択中のオブジェクトのプロパティをリアルタイムに更新
+        input.addEventListener('input', (e) => {
             selectedObject[key] = parseFloat(e.target.value);
         });
-
-            row.appendChild(label);
-            row.appendChild(input);
-            this.editorPropsContainer.appendChild(row);
-        }
+        
+        row.appendChild(label);
+        row.appendChild(input);
+        this.editorPropsContainer.appendChild(row);
     }
+}
     
 
     /**
