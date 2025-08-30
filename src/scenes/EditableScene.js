@@ -1,8 +1,7 @@
 // src/scenes/EditableScene.js
 
 export default class EditableScene extends Phaser.Scene {
-    static editorInitialized = false;
-
+   
     constructor(config) {
         super(config);
         
@@ -38,7 +37,11 @@ export default class EditableScene extends Phaser.Scene {
      * this.addやthis.inputなどのシステムが、このメソッド内で使えるようになる
      */
     create() {
-      this.handleCreate();
+        if (this.isEditorMode) {
+            // ★ createの最後でエディタを初期化する
+            this.sys.events.once('postupdate', this.initEditorControls, this);
+        }
+        this.handleCreate();
     }
 
       // ★★★ updateメソッドを新設（または修正） ★★★
@@ -85,29 +88,17 @@ export default class EditableScene extends Phaser.Scene {
      * エディタのイベントリスナーなどを初期化する
      */
  
-    // --- 共通エディタ機能 ---
+      // --- 共通エディタ機能 ---
     initEditorControls() {
-        console.warn(`[EditableScene] Global Editor Controls Initialized.`);
+        if (this.editorInitialized) return;
+        console.warn(`[EditableScene] Editor Controls Initialized for scene: ${this.scene.key}`);
         
         this.editorPanel = document.getElementById('editor-panel');
         this.editorTitle = document.getElementById('editor-title');
         this.editorPropsContainer = document.getElementById('editor-props');
 
-        // ★ グローバルなポインターダウンイベントをリッスン
-        this.input.manager.on('pointerdown', (pointer) => {
-            if (!this.isEditorMode) return;
-            
-            // 最前面のアクティブなシーンを取得
-            const topScene = this.scene.manager.getScenes(true)[0];
-            const hitObjects = this.input.manager.hitTest(pointer, topScene.children.list, topScene.cameras.main);
-            const editableHit = hitObjects.find(obj => obj.input && obj.input.draggable);
-            
-            this.registry.set('editor_selected_object', editableHit || null);
-            this.updatePropertyPanel();
-        });
-
-        // ★ グローバルなドラッグイベントをリッスン
-        this.input.manager.on('drag', (pointer, gameObject, dragX, dragY) => {
+        // --- ドラッグ機能 ---
+        this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
             gameObject.x = Math.round(dragX);
             gameObject.y = Math.round(dragY);
             if (gameObject === this.registry.get('editor_selected_object')) {
@@ -115,16 +106,39 @@ export default class EditableScene extends Phaser.Scene {
             }
         });
 
+        // --- オブジェクト選択 ---
+        this.input.on('gameobjectdown', (pointer, gameObject) => {
+            this.registry.set('editor_selected_object', gameObject);
+            this.updatePropertyPanel();
+        });
+
+        // --- 選択解除 ---
+        this.input.on('pointerdown', (pointer) => {
+            // ヒットテストを行い、何もヒットしなかった場合のみ選択を解除
+            if (this.input.hitTest(pointer, [], this.cameras.main).length === 0) {
+                this.registry.set('editor_selected_object', null);
+                this.updatePropertyPanel();
+            }
+        });
+        
+        // --- JSONエクスポート ---
         this.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
+
+        // --- このシーンのオブジェクトをすべて編集可能にする ---
+        this.children.list.forEach(gameObject => {
+            this.makeEditable(gameObject);
+        });
+
+        this.editorInitialized = true;
     }
 
-     // ★★★ プロパティパネルを更新するメソッドを新規作成 ★★★
- updatePropertyPanel() {
-        if (!this.isEditorMode || !this.editorPanel) return;
 
+     // ★★★ プロパティパネルを更新するメソッドを新規作成 ★★★
+  updatePropertyPanel() {
+        if (!this.isEditorMode || !this.editorPanel) return;
         const selectedObject = this.registry.get('editor_selected_object');
         
-        if (!selectedObject) {
+        if (!selectedObject || selectedObject.scene !== this) { // ★ 選択オブジェクトがこのシーンのものでなければ隠す
             this.editorPanel.style.display = 'none';
             return;
         }
@@ -163,8 +177,7 @@ export default class EditableScene extends Phaser.Scene {
             input.step = prop.step;
             input.value = value;
 
-              input.addEventListener('input', (e) => {
-                // レジストリから取得した、現在選択中のオブジェクトを直接変更
+                input.addEventListener('input', (e) => {
                 selectedObject[key] = parseFloat(e.target.value);
             });
 
@@ -179,8 +192,8 @@ export default class EditableScene extends Phaser.Scene {
      * 指定されたゲームオブジェクトを編集可能（ドラッグ可能など）にする
      * @param {Phaser.GameObjects.GameObject} gameObject - 編集可能にしたいオブジェクト
      */
-     makeEditable(gameObject) {
-        if (!this.isEditorMode || !gameObject) return;
+      makeEditable(gameObject) {
+        if (!this.isEditorMode || !gameObject.name) return; // 名前がないものは編集不可
         try {
             gameObject.setInteractive();
             this.input.setDraggable(gameObject, true);
@@ -234,10 +247,7 @@ export default class EditableScene extends Phaser.Scene {
      * 動的に追加されたオブジェクトを、後から編集可能にする
      */
     addEditableObject(gameObject) {
-        if (!this.isEditorMode || !gameObject) return;
-        
-        // 既にエディタが初期化済みの場合のみ、makeEditableを呼び出す
-        if (this.editorInitialized) {
+        if (this.isEditorMode && this.editorInitialized) {
             this.makeEditable(gameObject);
         }
     }

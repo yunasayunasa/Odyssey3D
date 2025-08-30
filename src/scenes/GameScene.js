@@ -128,12 +128,8 @@ export default class GameScene  extends EditableScene {
         console.log("GameScene: create 完了");
             console.log("[LOG-BOMB] GameScene.create: END");
 
-             if (this.isEditorMode) {
-        this.children.list.forEach(gameObject => {
-            // コンテナの中身も含めて再帰的に探索すると、より完璧
-            if (gameObject.name) this.makeEditable(gameObject);
-        });
-    }
+         
+    
 }
     
 
