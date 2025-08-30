@@ -1,6 +1,8 @@
 // src/scenes/EditableScene.js
 
 export default class EditableScene extends Phaser.Scene {
+    static editorInitialized = false;
+
     constructor(config) {
         super(config);
         
@@ -40,25 +42,18 @@ export default class EditableScene extends Phaser.Scene {
     }
 
       // ★★★ updateメソッドを新設（または修正） ★★★
-    update(time, delta) {
-        // --- エディタの初回初期化 ---
-        // isEditorModeがtrueで、まだ初期化されていなければ、一度だけ実行
-        if (this.isEditorMode && !this.editorInitialized) {
+     update(time, delta) {
+        // ★★★ チェックする対象を、静的プロパティに変更 ★★★
+        if (this.isEditorMode && !EditableScene.editorInitialized) {
             this.initEditorControls();
             
-            // ★ シーン上のすべてのオブジェクトを編集可能にする
-            this.children.list.forEach(gameObject => {
-                // コンテナと、その中の子要素もすべて編集可能にする
-                if (gameObject.list) {
-                    gameObject.list.forEach(child => {
-                        if(child.name) this.makeEditable(child);
-                    });
-                }
-                if(gameObject.name) this.makeEditable(gameObject);
-            });
+            // ★★★ この初期化ロジックは、最初に起動したEditableSceneに任せるので、ここからは削除 ★★★
+            // this.children.list.forEach(gameObject => { ... });
             
-            this.editorInitialized = true;
+            EditableScene.editorInitialized = true; // ★ 静的プロパティを更新
         }
+            
+         
 
         // --- 子シーンのupdate処理を呼び出す ---
         if (this.handleUpdate) {
@@ -106,26 +101,23 @@ export default class EditableScene extends Phaser.Scene {
     // ★★★ ここからが修正箇所 ★★★
 
     // --- オブジェクト選択/選択解除 ---
-    this.input.on('pointerdown', (pointer) => {
-        // gameobjectdownより先に発火するので、少し待ってから判定
-        setTimeout(() => {
-            // pointerdownでヒットしたオブジェクトのリストを取得
-            const hitObjects = this.input.manager.hitTest(pointer, this.children.list, this.cameras.main);
-            
-            // 編集可能なオブジェクトがヒットしたかチェック
-            const editableHit = hitObjects.find(obj => obj.input && obj.input.draggable);
+     this.input.on('pointerdown', (pointer) => {
+            // ★ 現在アクティブな最前面のシーンを取得
+            const topScene = this.scene.manager.getScenes(true)[0];
 
-            if (editableHit) {
-                // ヒットしたら、それを選択
-                this.selectedObject = editableHit;
-            } else {
-                // 何もない場所をクリックしたら、選択を解除
-                this.selectedObject = null;
-            }
-            // 選択状態が変わったので、プロパティパネルを更新
-            this.updatePropertyPanel();
-        }, 0);
-    });
+            // ★ 自分自身が最前面のシーンでなければ、何もしない
+            if (topScene !== this) return;
+            
+            setTimeout(() => {
+                const hitObjects = this.input.manager.hitTest(pointer, this.children.list, this.cameras.main);
+                const editableHit = hitObjects.find(obj => obj.input && obj.input.draggable);
+                
+                // ★ selectedObjectはグローバルに一つだけにする
+                this.registry.set('editor_selected_object', editableHit || null);
+                
+                this.updatePropertyPanel();
+            }, 0);
+        });
 
     // --- ドラッグ機能 ---
     this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
@@ -146,21 +138,19 @@ export default class EditableScene extends Phaser.Scene {
 }
 
      // ★★★ プロパティパネルを更新するメソッドを新規作成 ★★★
-   updatePropertyPanel() {
-    if (!this.isEditorMode || !this.editorPanel) return;
+  updatePropertyPanel() {
+        // ★ 選択オブジェクトを、レジストリから取得する
+        const selectedObject = this.registry.get('editor_selected_object');
+        
+        if (!this.isEditorMode || !this.editorPanel) return;
+        
+        if (!selectedObject) {
+            this.editorPanel.style.display = 'none';
+            return;
+        }
 
-    // ★★★ パネルの表示/非表示をここで制御 ★★★
-    if (!this.selectedObject) {
-        // 何も選択されていなければ、パネルを隠す
-        this.editorPanel.style.display = 'none';
-        return;
-    }
-
-    // オブジェクトが選択されたら、パネルを表示する
-    this.editorPanel.style.display = 'block';
-    
-
-        this.editorTitle.innerText = `Editing: ${this.selectedObject.name}`;
+        this.editorPanel.style.display = 'block';
+        this.editorTitle.innerText = `Editing: ${selectedObject.name}`;
 
         // --- 編集したいプロパティを定義 ---
         const properties = {

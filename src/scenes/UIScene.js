@@ -74,12 +74,23 @@ export default class UIScene extends EditableScene {
         this.enemyHpBar.name = 'enemy_hp_bar';
         this.panel.name = 'bottom_panel'; // パネルにも名前を付けると便利
         
+
+        
         // --- SystemSceneからの通知を受け取るリスナー ---
         const systemScene = this.scene.get('SystemScene');
         systemScene.events.on('transition-complete', this.onSceneTransition, this);
         
         console.log("UI作成完了");
-    } // ★★★ 足りなかった `}` をここに追加 ★★★
+      // ★★★ 自分のシーンのオブジェクトを編集可能にする ★★★
+    if (this.isEditorMode) {
+        this.children.list.forEach(child => {
+            if (child.name) this.makeEditable(child);
+            if (child.list) { // コンテナの場合
+                child.list.forEach(c => { if (c.name) this.makeEditable(c); });
+            }
+        });
+    }
+}
 
     // --- 以下、このクラスが持つメソッド群 ---
    onSceneTransition(newSceneKey) {
