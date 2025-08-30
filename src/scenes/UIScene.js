@@ -81,12 +81,8 @@ export default class UIScene extends EditableScene {
         systemScene.events.on('transition-complete', this.onSceneTransition, this);
         
         console.log("UI作成完了");
-     if (this.isEditorMode) {
-        this.makeEditable(this.menuButton);
-        this.makeEditable(this.coinHud);
-        this.makeEditable(this.playerHpBar);
-        this.makeEditable(this.enemyHpBar);
-    }
+      // ★★★ 自分のシーンのオブジェクトを編集可能にする ★★★
+      this.input.setHitArea(this.children.list);
 }
     // --- 以下、このクラスが持つメソッド群 ---
    onSceneTransition(newSceneKey) {
